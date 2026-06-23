@@ -89,37 +89,37 @@ Which phases cover which requirements. Populated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| OPS-05 | TBD | Pending |
-| OPS-01 | TBD | Pending |
-| AUTH-01 | TBD | Pending |
-| AUTH-02 | TBD | Pending |
-| AUTH-03 | TBD | Pending |
-| AUTH-04 | TBD | Pending |
-| NOTE-01 | TBD | Pending |
-| NOTE-02 | TBD | Pending |
-| NOTE-03 | TBD | Pending |
-| NOTE-04 | TBD | Pending |
-| ORG-01 | TBD | Pending |
-| ORG-02 | TBD | Pending |
-| ORG-03 | TBD | Pending |
-| ORG-04 | TBD | Pending |
-| SRCH-01 | TBD | Pending |
-| AIL-01 | TBD | Pending |
-| AIL-02 | TBD | Pending |
-| RAG-01 | TBD | Pending |
-| RAG-02 | TBD | Pending |
-| API-01 | TBD | Pending |
-| API-02 | TBD | Pending |
-| API-03 | TBD | Pending |
-| OPS-02 | TBD | Pending |
-| OPS-03 | TBD | Pending |
-| OPS-04 | TBD | Pending |
+| OPS-05 | Phase 1 | Pending |
+| NOTE-01 | Phase 2 | Pending |
+| NOTE-02 | Phase 2 | Pending |
+| NOTE-03 | Phase 2 | Pending |
+| NOTE-04 | Phase 2 | Pending |
+| API-01 | Phase 2 | Pending |
+| API-02 | Phase 2 | Pending |
+| API-03 | Phase 2 | Pending |
+| OPS-01 | Phase 2 | Pending |
+| AUTH-01 | Phase 3 | Pending |
+| AUTH-02 | Phase 3 | Pending |
+| AUTH-03 | Phase 3 | Pending |
+| AUTH-04 | Phase 3 | Pending |
+| ORG-01 | Phase 4 | Pending |
+| ORG-02 | Phase 4 | Pending |
+| ORG-03 | Phase 4 | Pending |
+| ORG-04 | Phase 4 | Pending |
+| SRCH-01 | Phase 4 | Pending |
+| AIL-01 | Phase 5 | Pending |
+| AIL-02 | Phase 5 | Pending |
+| RAG-01 | Phase 6 | Pending |
+| RAG-02 | Phase 6 | Pending |
+| OPS-02 | Phase 7 | Pending |
+| OPS-03 | Phase 7 | Pending |
+| OPS-04 | Phase 7 | Pending |
 
 **Coverage:**
 - v1 requirements: 25 total
-- Mapped to phases: 0 (to be filled by roadmap)
-- Unmapped: 25 ⚠️
+- Mapped to phases: 25 (Phase 1: 1, Phase 2: 8, Phase 3: 4, Phase 4: 5, Phase 5: 2, Phase 6: 2, Phase 7: 3)
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-06-23*
-*Last updated: 2026-06-23 after initial definition*
+*Last updated: 2026-06-23 after roadmap creation — all 25 v1 requirements mapped*
