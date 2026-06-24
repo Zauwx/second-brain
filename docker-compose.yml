@@ -1,16 +1,65 @@
 # =============================================================================
-# Second Brain — Docker Compose (Walking Skeleton / Phase 1)
+# Second Brain — Docker Compose (Phase 2: api + mysql)
 #
-# Services: api only — mysql, qdrant, and ollama are deferred (Phase 2 / Phase 5)
-# Secrets: loaded at RUNTIME via env_file; never baked into image layers
+# Services:
+#   api    — FastAPI application (port 8000 exposed to host)
+#   mysql  — MySQL 8.4 database (internal network only, NOT exposed to host)
+#
+# Secrets: loaded at RUNTIME via env_file (.env); never baked into images.
 #
 # Usage:
-#   cp .env.example .env   # fill in real values (this file is gitignored)
+#   cp .env.example .env    # fill in real values (gitignored)
 #   docker compose up -d --build
 #   open http://localhost:8000/docs
+#
+# Run migrations before using the API:
+#   docker compose exec api alembic upgrade head
 # =============================================================================
 
 services:
+  # ---------------------------------------------------------------------------
+  # MySQL 8.4 — relational store
+  # Not exposed to host in this config (internal Docker network only).
+  # For local development access via a DB client (TablePlus, DBeaver):
+  #   create docker-compose.override.yml and add ports: ["3306:3306"] to mysql.
+  # ---------------------------------------------------------------------------
+  mysql:
+    image: mysql:8.4
+    env_file:
+      - .env
+    environment:
+      # These variable names are what the mysql:8.4 image reads at init time.
+      # They must match the keys in your .env file.
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "localhost",
+          "-u",
+          "root",
+          "--password=${MYSQL_ROOT_PASSWORD}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - backend
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # FastAPI API — the main application
+  # Port 8000 is the only port exposed to the host.
+  # ---------------------------------------------------------------------------
   api:
     build:
       context: .
@@ -19,4 +68,25 @@ services:
       - "8000:8000"
     env_file:
       - .env
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - backend
     restart: unless-stopped
+
+# ---------------------------------------------------------------------------
+# Named volumes — data persists across container restarts and rebuilds.
+# To wipe all data: docker compose down -v
+# ---------------------------------------------------------------------------
+volumes:
+  mysql_data:
+
+# ---------------------------------------------------------------------------
+# Networks — internal Docker bridge network.
+# The api and mysql services communicate via service names (not localhost).
+# No external traffic can reach mysql directly.
+# ---------------------------------------------------------------------------
+networks:
+  backend:
+    driver: bridge

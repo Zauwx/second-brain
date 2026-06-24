@@ -16,10 +16,10 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Notes
 
-- [ ] **NOTE-01**: User can create a note with text content and an optional source URL/title
-- [ ] **NOTE-02**: User can retrieve a single note and list their own notes
-- [ ] **NOTE-03**: User can update their own note
-- [ ] **NOTE-04**: User can delete their own note
+- [x] **NOTE-01**: User can create a note with text content and an optional source URL/title
+- [x] **NOTE-02**: User can retrieve a single note and list their own notes
+- [x] **NOTE-03**: User can update their own note
+- [x] **NOTE-04**: User can delete their own note
 
 ### Organization
 
@@ -44,13 +44,13 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### API Quality (REST / HTTP)
 
-- [ ] **API-01**: List endpoints support pagination, filtering, and sorting with correct HTTP status codes
-- [ ] **API-02**: The API exposes auto-generated OpenAPI/Swagger documentation
-- [ ] **API-03**: The API has an automated test suite (pytest) covering the core endpoints
+- [x] **API-01**: List endpoints support pagination, filtering, and sorting with correct HTTP status codes
+- [x] **API-02**: The API exposes auto-generated OpenAPI/Swagger documentation
+- [x] **API-03**: The API has an automated test suite (pytest) covering the core endpoints
 
 ### DevOps & Infrastructure
 
-- [ ] **OPS-01**: The whole app runs in Docker containers (api, mysql, ollama) via Docker Compose
+- [x] **OPS-01**: The whole app runs in Docker containers (api, mysql, ollama) via Docker Compose
 - [ ] **OPS-02**: There are separate dev/live and prod environment configurations (compose overrides + env files)
 - [ ] **OPS-03**: A CI pipeline (GitHub Actions) runs lint and tests on every push
 - [ ] **OPS-04**: CI builds and publishes a versioned Docker image; releases are tagged with semantic versions
@@ -90,14 +90,14 @@ Which phases cover which requirements. Populated during roadmap creation.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | OPS-05 | Phase 1 | Complete |
-| NOTE-01 | Phase 2 | Pending |
-| NOTE-02 | Phase 2 | Pending |
-| NOTE-03 | Phase 2 | Pending |
-| NOTE-04 | Phase 2 | Pending |
-| API-01 | Phase 2 | Pending |
-| API-02 | Phase 2 | Pending |
-| API-03 | Phase 2 | Pending |
-| OPS-01 | Phase 2 | Pending |
+| NOTE-01 | Phase 2 | Complete |
+| NOTE-02 | Phase 2 | Complete |
+| NOTE-03 | Phase 2 | Complete |
+| NOTE-04 | Phase 2 | Complete |
+| API-01 | Phase 2 | Complete |
+| API-02 | Phase 2 | Complete |
+| API-03 | Phase 2 | Complete |
+| OPS-01 | Phase 2 | Complete |
 | AUTH-01 | Phase 3 | Pending |
 | AUTH-02 | Phase 3 | Pending |
 | AUTH-03 | Phase 3 | Pending |

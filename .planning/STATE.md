@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Phase 1 shipped to public master (no PR — none branching); PR workflow enabled for Phase 2+
-stopped_at: Completed 01-03-PLAN.md (Docker + GitHub push)
-last_updated: "2026-06-24T08:47:22.928Z"
+status: "Phase 02 shipped — PR #1"
+stopped_at: Completed 02-03-PLAN.md (list pagination/sort/filter hardening)
+last_updated: "2026-06-24T13:48:50.198Z"
 last_activity: 2026-06-24
 progress:
   total_phases: 7
-  completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
-  percent: 14
+  completed_phases: 2
+  total_plans: 6
+  completed_plans: 6
+  percent: 29
 ---
 
 # Project State
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-23)
 
 **Core value:** User can save content and retrieve / query their knowledge in natural language (RAG)
-**Current focus:** Phase 2 — database + api skeleton
+**Current focus:** Phase 02 — database-api-skeleton
 
 ## Current Position
 
-Phase: 2
-Plan: Not started
-Status: Phase 1 shipped to public master (no PR — none branching); PR workflow enabled for Phase 2+
+Phase: 02 — COMPLETE
+Plan: 3 of 3
+Status: Phase 02 shipped — PR #1
 Last activity: 2026-06-24
 
 Progress: [██████████] 100%
@@ -55,6 +55,8 @@ Progress: [██████████] 100%
 | Phase 01-repo-foundation P01 | 3 | 3 tasks | 5 files |
 | Phase 01-repo-foundation P02 | 12 | 3 tasks | 14 files |
 | Phase 01-repo-foundation P03 | 40 | 5 tasks | 4 files |
+| Phase 02 P02 | 20 | 3 tasks | 8 files |
+| Phase 02 P03 | 9 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -76,6 +78,11 @@ Recent decisions affecting current work:
 - [Phase ?]: D-01/D-02: GitHub repo second-brain created as PUBLIC from first push — permanent portfolio history
 - [Phase ?]: D-12: python:3.12-slim (not Alpine) chosen to support asyncmy Cython and cryptography C extensions in later phases
 - [Phase ?]: Secret isolation: .dockerignore + no COPY .env + env_file at runtime = three independent protection layers
+- [Phase ?]: NoteListResponse{items,total,page,size,pages} is the canonical pagination envelope (D-06)
+- [Phase ?]: testcontainers mysql:8.4 + alembic upgrade head replaces SQLite for all Note tests
+- [Phase ?]: Routes at /notes/ (trailing slash) and /notes/{note_id} — httpx does not follow redirects
+- [Phase ?]: Sort whitelist dict maps created_at/updated_at tokens to ORM columns; unknown token raises ValueError→422 (no silent fallback)
+- [Phase ?]: Service layer translates repository ValueError to HTTPException 422 to prevent 500 leaking internal errors (T-02-14)
 
 ### Pending Todos
 
@@ -94,6 +101,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-24T08:12:41.222Z
-Stopped at: Completed 01-03-PLAN.md (Docker + GitHub push)
+Last session: 2026-06-24T13:33:38.606Z
+Stopped at: Completed 02-03-PLAN.md (list pagination/sort/filter hardening)
 Resume file: None
