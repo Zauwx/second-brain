@@ -3,12 +3,10 @@
 Changes from Phase 1:
 - Added `lifespan` context manager for startup/shutdown lifecycle.
 - Registered the notes router at /notes prefix.
+- Lifespan shutdown disposes the async engine connection pool cleanly.
 
-The `lifespan` pattern (not deprecated `on_startup` / `on_shutdown`) is the
-FastAPI-recommended way to run code at startup and shutdown. In this phase,
-no explicit startup is needed — the async engine is created lazily when the
-first request arrives. Later phases will use lifespan to initialise Qdrant
-and Ollama clients.
+The `lifespan` parameter is the FastAPI-recommended lifecycle hook — use it
+instead of the older event-registration API.
 
 Database migration note:
   Do NOT run `alembic upgrade head` here. Running migrations in app startup
@@ -23,6 +21,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.api.health import router as health_router
+from app.database import engine
 from app.notes.router import router as notes_router
 
 
@@ -31,13 +30,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan: startup → yield → shutdown.
 
     Startup: no-op in Phase 2 (engine initialised lazily on first request).
-    Shutdown: SQLAlchemy disposes of the connection pool automatically when
-              the engine object is garbage-collected; no explicit cleanup needed here.
+    Shutdown: dispose the async engine so all pooled connections are closed
+              cleanly — important for graceful container shutdown.
     Future phases will add Qdrant and Ollama client initialisation in startup.
     """
     # -- startup --
     yield
     # -- shutdown --
+    await engine.dispose()
 
 
 app = FastAPI(
