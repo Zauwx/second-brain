@@ -95,57 +95,65 @@ async def test_page_zero_returns_422(client: httpx.AsyncClient) -> None:
 
 
 async def test_sort_created_at_ascending_oldest_first(client: httpx.AsyncClient) -> None:
-    """?sort=created_at should return oldest notes first (ascending order)."""
-    # Seed notes so created_at ordering is deterministic
-    ids = []
+    """?sort=created_at should return oldest notes first (ascending order).
+
+    Verifies created_at values are in non-decreasing order.
+    MySQL DATETIME has 1-second granularity, so ties are allowed.
+    """
     for i in range(3):
         r = await client.post("/notes/", json={"content": f"sort test ascending {i}"})
         assert r.status_code == 201
-        ids.append(r.json()["id"])
 
     response = await client.get("/notes/?sort=created_at")
     assert response.status_code == 200
 
     items = response.json()["items"]
-    # The oldest (smallest id / earliest created_at) should come first
-    returned_ids = [item["id"] for item in items]
-    # ids were created in order, so ascending sort should yield them in same creation order
-    # (earliest created_at first)
-    first_pos = returned_ids.index(ids[0])
-    last_pos = returned_ids.index(ids[-1])
-    assert first_pos < last_pos, (
-        f"sort=created_at should return oldest first; got ids[0] at position {first_pos}, "
-        f"ids[-1] at position {last_pos}"
-    )
+    assert len(items) >= 3
+
+    # created_at values must be non-decreasing (ascending sort)
+    created_ats = [item["created_at"] for item in items]
+    for i in range(1, len(created_ats)):
+        assert created_ats[i] >= created_ats[i - 1], (
+            f"sort=created_at should be non-decreasing; "
+            f"position {i - 1}={created_ats[i - 1]!r} > position {i}={created_ats[i]!r}"
+        )
 
 
 async def test_sort_default_desc_newest_first(client: httpx.AsyncClient) -> None:
-    """Default sort (-created_at) should return newest notes first (descending order)."""
-    ids = []
+    """Default sort (-created_at) should return newest notes first (descending order).
+
+    Verifies created_at values are in non-increasing order.
+    MySQL DATETIME has 1-second granularity, so ties are allowed.
+    """
     for i in range(3):
         r = await client.post("/notes/", json={"content": f"sort test descending {i}"})
         assert r.status_code == 201
-        ids.append(r.json()["id"])
 
     # Default sort = -created_at (newest first)
     response = await client.get("/notes/")
     assert response.status_code == 200
 
     items = response.json()["items"]
-    returned_ids = [item["id"] for item in items]
-    # Most recently created note (ids[-1]) should appear before first created note (ids[0])
-    first_pos = returned_ids.index(ids[0])
-    last_pos = returned_ids.index(ids[-1])
-    assert last_pos < first_pos, (
-        f"default sort (-created_at) should return newest first; got ids[-1] at position "
-        f"{last_pos}, ids[0] at position {first_pos}"
-    )
+    assert len(items) >= 3
+
+    # created_at values must be non-increasing (descending sort)
+    created_ats = [item["created_at"] for item in items]
+    for i in range(1, len(created_ats)):
+        assert created_ats[i] <= created_ats[i - 1], (
+            f"default sort (-created_at) should be non-increasing; "
+            f"position {i - 1}={created_ats[i - 1]!r} < position {i}={created_ats[i]!r}"
+        )
 
 
 async def test_sort_created_at_opposite_order_from_default(client: httpx.AsyncClient) -> None:
-    """?sort=created_at (asc) and default -created_at (desc) return opposite orderings."""
+    """?sort=created_at (asc) and default -created_at (desc) return opposite sort direction.
+
+    Verifies that asc produces non-decreasing created_at values and desc produces
+    non-increasing created_at values. MySQL DATETIME has 1-second granularity so
+    this test handles ties correctly via the monotone direction check.
+    """
     for i in range(3):
-        r = await client.post("/notes/", json={"content": f"sort order check {i}"})
+        r = await client.post("/notes/", json={"content": f"sort direction check {i}"})
         assert r.status_code == 201
 
     asc_response = await client.get("/notes/?sort=created_at")
@@ -154,18 +162,27 @@ async def test_sort_created_at_opposite_order_from_default(client: httpx.AsyncCl
     assert asc_response.status_code == 200
     assert desc_response.status_code == 200
 
-    asc_ids = [item["id"] for item in asc_response.json()["items"]]
-    desc_ids = [item["id"] for item in desc_response.json()["items"]]
+    asc_items = asc_response.json()["items"]
+    desc_items = desc_response.json()["items"]
 
-    # Must have at least 2 items to compare ordering
-    assert len(asc_ids) >= 2
-    assert len(desc_ids) >= 2
+    assert len(asc_items) >= 2
+    assert len(desc_items) >= 2
 
-    # Orderings should differ — if both lists have the same content, the order must be reversed
-    # Compare first vs last elements across both orderings
-    assert asc_ids[0] != desc_ids[0], (
-        "sort=created_at (asc) and -created_at (desc) must yield opposite first element"
-    )
+    # Ascending: created_at must be non-decreasing
+    asc_created_ats = [item["created_at"] for item in asc_items]
+    for i in range(1, len(asc_created_ats)):
+        assert asc_created_ats[i] >= asc_created_ats[i - 1], (
+            f"sort=created_at must be non-decreasing; "
+            f"position {i - 1}={asc_created_ats[i - 1]!r} > position {i}={asc_created_ats[i]!r}"
+        )
+
+    # Descending: created_at must be non-increasing
+    desc_created_ats = [item["created_at"] for item in desc_items]
+    for i in range(1, len(desc_created_ats)):
+        assert desc_created_ats[i] <= desc_created_ats[i - 1], (
+            f"sort=-created_at must be non-increasing; "
+            f"position {i - 1}={desc_created_ats[i - 1]!r} < position {i}={desc_created_ats[i]!r}"
+        )
 
 
 async def test_sort_updated_at_returns_200(client: httpx.AsyncClient) -> None:

@@ -49,12 +49,24 @@ class NoteService:
             page: 1-indexed page number.
             size: Records per page (bounded by router — Query le=100).
             sort: Sort expression (leading '-' = descending).
+                  Unknown sort fields yield HTTP 422 (D-07/D-09, T-02-11/T-02-14).
             filter: Optional substring match on note content.
 
         Returns:
             NoteListResponse envelope with {items, total, page, size, pages}.
+
+        Raises:
+            HTTPException 422: When the repository raises ValueError for an invalid sort field.
         """
-        items, total = await self._repo.list_paginated(page, size, sort, filter)
+        try:
+            items, total = await self._repo.list_paginated(page, size, sort, filter)
+        except ValueError as exc:
+            # Repository raises ValueError for unknown sort tokens (D-07, T-02-11).
+            # Translate to a clean 422 — do not let a 500 leak internals (T-02-14).
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=str(exc),
+            ) from exc
         pages = (total + size - 1) // size if total > 0 else 0
         return NoteListResponse(items=items, total=total, page=page, size=size, pages=pages)
 
