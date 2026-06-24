@@ -125,7 +125,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Repo Foundation | 3/3 | Complete   | 2026-06-24 |
-| 2. Database + API Skeleton | 1/1 | Complete   | 2026-06-24 |
+| 2. Database + API Skeleton | 2/3 | In Progress|  |
 | 3. Auth + Per-User Data Isolation | 0/TBD | Not started | - |
 | 4. Tags, Collections, Full-Text Search | 0/TBD | Not started | - |
 | 5. Local AI (Ollama) | 0/TBD | Not started | - |

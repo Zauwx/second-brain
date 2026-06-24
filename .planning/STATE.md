@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 01-03-PLAN.md (Docker + GitHub push)
-last_updated: "2026-06-24T12:57:13.331Z"
+stopped_at: Completed 02-02-PLAN.md (Note CRUD contract + testcontainers)
+last_updated: "2026-06-24T13:22:23.703Z"
 last_activity: 2026-06-24
 progress:
   total_phases: 7
-  completed_phases: 2
-  total_plans: 4
-  completed_plans: 4
-  percent: 29
+  completed_phases: 1
+  total_plans: 6
+  completed_plans: 5
+  percent: 14
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-06-23)
 ## Current Position
 
 Phase: 02 (database-api-skeleton) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-06-24
 
-Progress: [██████████] 100%
+Progress: [████████░░] 83%
 
 ## Performance Metrics
 
@@ -55,6 +55,7 @@ Progress: [██████████] 100%
 | Phase 01-repo-foundation P01 | 3 | 3 tasks | 5 files |
 | Phase 01-repo-foundation P02 | 12 | 3 tasks | 14 files |
 | Phase 01-repo-foundation P03 | 40 | 5 tasks | 4 files |
+| Phase 02 P02 | 20 | 3 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -76,6 +77,9 @@ Recent decisions affecting current work:
 - [Phase ?]: D-01/D-02: GitHub repo second-brain created as PUBLIC from first push — permanent portfolio history
 - [Phase ?]: D-12: python:3.12-slim (not Alpine) chosen to support asyncmy Cython and cryptography C extensions in later phases
 - [Phase ?]: Secret isolation: .dockerignore + no COPY .env + env_file at runtime = three independent protection layers
+- [Phase ?]: NoteListResponse{items,total,page,size,pages} is the canonical pagination envelope (D-06)
+- [Phase ?]: testcontainers mysql:8.4 + alembic upgrade head replaces SQLite for all Note tests
+- [Phase ?]: Routes at /notes/ (trailing slash) and /notes/{note_id} — httpx does not follow redirects
 
 ### Pending Todos
 
@@ -94,6 +98,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-24T12:57:13.323Z
-Stopped at: Completed 01-03-PLAN.md (Docker + GitHub push)
+Last session: 2026-06-24T13:22:23.697Z
+Stopped at: Completed 02-02-PLAN.md (Note CRUD contract + testcontainers)
 Resume file: None
