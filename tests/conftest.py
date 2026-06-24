@@ -1,83 +1,110 @@
 """pytest fixtures shared across all tests.
 
-Test database strategy:
-  - Uses SQLite in-memory via aiosqlite for fast, dependency-free tests.
-  - SQLite is API-compatible with MySQL for CRUD operations (different from
-    MySQL for FULLTEXT, JSON columns, etc. — those are tested in Docker in CI).
-  - `Base.metadata.create_all()` creates tables without Alembic — tests don't
-    need migration history, only the schema.
-  - Each test gets a fresh engine + tables via function-scoped fixtures.
+Test database strategy (D-16, D-17, D-18):
+  - Real ephemeral mysql:8.4 container spun up once per test session via testcontainers.
+  - Schema built by `alembic upgrade head` against the test DB — verifies migrations work.
+  - Each test gets transaction-level isolation: a nested transaction is opened, the test
+    runs, then the transaction is rolled back — DB stays clean between tests.
 
 FastAPI dependency override pattern:
-  - `get_db` is overridden via `app.dependency_overrides` to inject the test
-    SQLite session instead of the production MySQL session.
+  - `get_db` from `app.core.dependencies` is overridden via `app.dependency_overrides`
+    to inject the transactional test session.
   - This is the FastAPI-recommended approach — no monkey-patching needed.
 
-Why SQLite for tests:
-  - No external service required → tests run anywhere (CI, dev machine, Docker).
-  - The actual MySQL integration is validated by `alembic upgrade head` in Docker.
-  - SQLite limitations (no FULLTEXT, no UNSIGNED INT enforcement) are acceptable
-    because Phase 2 tests only cover basic CRUD, not search or constraints.
+Requirements:
+  - Docker must be running locally for testcontainers to spin up the MySQL container.
+  - `testcontainers[mysql]>=4.0.0` must be in dev dependencies.
 """
 
-from collections.abc import AsyncGenerator
+import os
+import subprocess
 
+import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from testcontainers.mysql import MySqlContainer
 
 from app.core.dependencies import get_db
-from app.database import Base
 from app.main import app
 
 # ---------------------------------------------------------------------------
-# In-memory SQLite engine (per test session, tables created per test)
+# Session-scoped: real MySQL container + alembic-built schema
 # ---------------------------------------------------------------------------
 
-TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
+
+@pytest.fixture(scope="session")
+def mysql_container():
+    """Spin up a real mysql:8.4 container once per test session (D-16)."""
+    with MySqlContainer("mysql:8.4") as container:
+        yield container
 
 
-@pytest_asyncio.fixture()
-async def test_engine():
-    """Create a fresh async SQLite engine for each test."""
-    engine = create_async_engine(TEST_DATABASE_URL, echo=False)
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+@pytest.fixture(scope="session")
+def test_database_url(mysql_container: MySqlContainer) -> str:
+    """Build an asyncmy DSN from the testcontainer's exposed connection details."""
+    host = mysql_container.get_container_host_ip()
+    port = mysql_container.get_exposed_port(3306)
+    user = mysql_container.username
+    password = mysql_container.password
+    database = mysql_container.dbname
+    return f"mysql+asyncmy://{user}:{password}@{host}:{port}/{database}?charset=utf8mb4"
+
+
+@pytest.fixture(scope="session")
+def run_migrations(test_database_url: str) -> None:
+    """Run `alembic upgrade head` against the test DB (D-17).
+
+    This verifies that the migration scripts are correct and produces an
+    identical schema to production — not `metadata.create_all()`.
+    """
+    env = {**os.environ, "DATABASE_URL": test_database_url}
+    subprocess.run(["alembic", "upgrade", "head"], env=env, check=True)
+
+
+@pytest_asyncio.fixture(scope="session")
+async def test_engine(test_database_url: str, run_migrations: None):
+    """Async engine connected to the test MySQL container."""
+    engine = create_async_engine(test_database_url, pool_pre_ping=True)
     yield engine
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
     await engine.dispose()
 
 
-@pytest_asyncio.fixture()
-async def test_session(test_engine) -> AsyncGenerator[AsyncSession, None]:
-    """Yield a test AsyncSession backed by the in-memory SQLite engine."""
-    test_session_local = async_sessionmaker(
-        bind=test_engine,
-        expire_on_commit=False,
-        autocommit=False,
-        autoflush=False,
-    )
-    async with test_session_local() as session:
-        yield session
+# ---------------------------------------------------------------------------
+# Function-scoped: per-test transaction rollback for isolation (D-18)
+# ---------------------------------------------------------------------------
 
 
-@pytest_asyncio.fixture()
-async def client(test_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
-    """Yield an httpx AsyncClient with the test DB injected via dependency override.
+@pytest_asyncio.fixture
+async def session(test_engine) -> AsyncSession:
+    """Per-test AsyncSession with transaction rollback for isolation (D-18).
 
-    The `get_db` dependency is replaced so every request during the test uses
-    the same in-memory SQLite session — no MySQL required.
+    Opens a connection + outer transaction, binds a session to it, yields the
+    session to the test, then rolls back — leaving the DB pristine for the next
+    test without touching the real MySQL container data.
+    """
+    async with test_engine.connect() as conn:
+        await conn.begin()
+        session_factory = async_sessionmaker(bind=conn, expire_on_commit=False)
+        async with session_factory() as sess:
+            yield sess
+        await conn.rollback()
+
+
+@pytest_asyncio.fixture
+async def client(session: AsyncSession) -> AsyncClient:
+    """AsyncClient with the test DB session injected via dependency override.
+
+    Overrides `get_db` (the dependency the router chain resolves through) so
+    every request during the test uses the transactional test session.
     """
 
-    async def override_get_db() -> AsyncGenerator[AsyncSession, None]:
-        yield test_session
+    async def override_get_db():
+        yield session
 
     app.dependency_overrides[get_db] = override_get_db
 
-    async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
-    ) as ac:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         yield ac
 
     app.dependency_overrides.clear()
