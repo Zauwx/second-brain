@@ -1,0 +1,22 @@
+# =============================================================================
+# Second Brain — Docker Compose (Walking Skeleton / Phase 1)
+#
+# Services: api only — mysql, qdrant, and ollama are deferred (Phase 2 / Phase 5)
+# Secrets: loaded at RUNTIME via env_file; never baked into image layers
+#
+# Usage:
+#   cp .env.example .env   # fill in real values (this file is gitignored)
+#   docker compose up -d --build
+#   open http://localhost:8000/docs
+# =============================================================================
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    restart: unless-stopped
