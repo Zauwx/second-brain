@@ -33,7 +33,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. `docker compose up` starts the FastAPI skeleton and `GET /health` returns 200 via Swagger UI at `http://localhost:8000/docs`
   4. `uv run ruff check app/` passes with zero errors on the skeleton code
 **Plans**: 3 plans
-- [ ] 01-01-PLAN.md — Repo hygiene + portfolio docs (.gitignore, .gitattributes, .env.example, LICENSE, README)
+- [x] 01-01-PLAN.md — Repo hygiene + portfolio docs (.gitignore, .gitattributes, .env.example, LICENSE, README)
 - [ ] 01-02-PLAN.md — uv-managed FastAPI skeleton: ruff/mypy config, pydantic-settings, GET /health, domain layout
 - [ ] 01-03-PLAN.md — Dockerize (python:3.12-slim) + compose, end-to-end /health via Swagger, create + push public repo
 
@@ -124,7 +124,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Repo Foundation | 0/3 | Planned | - |
+| 1. Repo Foundation | 1/3 | In Progress|  |
 | 2. Database + API Skeleton | 0/TBD | Not started | - |
 | 3. Auth + Per-User Data Isolation | 0/TBD | Not started | - |
 | 4. Tags, Collections, Full-Text Search | 0/TBD | Not started | - |

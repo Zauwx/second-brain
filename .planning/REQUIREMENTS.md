@@ -54,7 +54,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **OPS-02**: There are separate dev/live and prod environment configurations (compose overrides + env files)
 - [ ] **OPS-03**: A CI pipeline (GitHub Actions) runs lint and tests on every push
 - [ ] **OPS-04**: CI builds and publishes a versioned Docker image; releases are tagged with semantic versions
-- [ ] **OPS-05**: Repo foundations prevent Windows/secret pitfalls (.gitignore excludes secrets, .gitattributes forces LF, .env.example provided)
+- [x] **OPS-05**: Repo foundations prevent Windows/secret pitfalls (.gitignore excludes secrets, .gitattributes forces LF, .env.example provided)
 
 ## v2 Requirements
 
@@ -89,7 +89,7 @@ Which phases cover which requirements. Populated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| OPS-05 | Phase 1 | Pending |
+| OPS-05 | Phase 1 | Complete |
 | NOTE-01 | Phase 2 | Pending |
 | NOTE-02 | Phase 2 | Pending |
 | NOTE-03 | Phase 2 | Pending |
