@@ -11,7 +11,7 @@ Design notes:
 - DSN is read lazily from Settings so tests can override via dependency injection.
 """
 
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator  # noqa: F401 — re-exported for downstream use
 
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
