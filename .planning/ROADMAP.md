@@ -49,7 +49,10 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. `alembic upgrade head` runs in the container and creates all tables with `utf8mb4` charset — `Base.metadata.create_all()` is absent from startup
   5. `pytest tests/ --asyncio-mode=auto` passes with coverage of core note endpoints using a real MySQL service container (no mocks for DB)
   6. `docker compose up` starts api + mysql; only the api port (8000) is exposed to the host
-**Plans**: TBD
+**Plans**: 3 plans
+- [ ] 02-01-PLAN.md — Async MySQL foundation: DB layer, Note model, async Alembic + first utf8mb4 migration, mysql:8.4 Docker service
+- [ ] 02-02-PLAN.md — Note CRUD vertical slice: schemas/repository/service/router + main.py lifespan wiring + real-MySQL test harness (testcontainers)
+- [ ] 02-03-PLAN.md — List contract: pagination/sort-whitelist/filter with 422 handling + full list test matrix
 
 ### Phase 3: Auth + Per-User Data Isolation
 **Goal**: Every note endpoint requires a valid JWT; each user sees only their own data; refresh token rotation is in place; cross-user access tests pass in CI
@@ -125,7 +128,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Repo Foundation | 3/3 | Complete   | 2026-06-24 |
-| 2. Database + API Skeleton | 0/TBD | Not started | - |
+| 2. Database + API Skeleton | 0/3 | Not started | - |
 | 3. Auth + Per-User Data Isolation | 0/TBD | Not started | - |
 | 4. Tags, Collections, Full-Text Search | 0/TBD | Not started | - |
 | 5. Local AI (Ollama) | 0/TBD | Not started | - |
