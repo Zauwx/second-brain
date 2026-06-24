@@ -1,7 +1,7 @@
 """Pydantic v2 schemas for the Note domain.
 
 Three-schema pattern (FastAPI best practice):
-  - NoteCreate  — used for POST /notes request body
+  - NoteCreate  — used for POST /notes/ request body
   - NoteUpdate  — used for PUT /notes/{id} request body (all fields optional)
   - NoteRead    — used for all responses; serialises ORM model via from_attributes=True
 
@@ -75,10 +75,15 @@ class NoteRead(BaseModel):
     updated_at: datetime
 
 
-class PaginatedNotes(BaseModel):
-    """Paginated response for GET /notes."""
+class NoteListResponse(BaseModel):
+    """Pagination envelope for GET /notes/ — {items, total, page, size, pages}."""
 
     items: list[NoteRead]
     total: int = Field(description="Total number of notes matching the query")
     page: int = Field(description="Current page number (1-indexed)")
-    page_size: int = Field(description="Number of items per page")
+    size: int = Field(description="Number of items per page")
+    pages: int = Field(description="Total number of pages")
+
+
+# Deprecated alias — kept for backward compatibility during transition.
+PaginatedNotes = NoteListResponse

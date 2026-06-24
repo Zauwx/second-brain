@@ -3,21 +3,16 @@
 Design principles:
 - Zero business logic here. No HTTP concerns. Pure data access.
 - All queries use SQLAlchemy 2.x `select()` + `scalars()` async pattern.
-- Session is injected via constructor (not imported globally) — makes testing easy:
-  replace NoteRepository(real_session) with NoteRepository(mock_session).
-- Sort columns are validated against an allow-list before use (prevents SQL injection
-  even though ORM params are parameterised, because we use `getattr` on the model).
+- Session is injected via constructor (not imported globally) — makes testing easy.
+- Sort parsing: a leading '-' in `sort` means descending (e.g. '-created_at').
+- Filter: optional case-insensitive substring match on `content` via LIKE.
 """
 
-from sqlalchemy import func, select
+from sqlalchemy import asc, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.notes.models import Note
 from app.notes.schemas import NoteCreate, NoteUpdate
-
-# Columns allowed for sorting — prevents arbitrary attribute access on Note model.
-_SORTABLE_COLUMNS = {"created_at", "updated_at", "id"}
-_SORT_ORDERS = {"asc", "desc"}
 
 
 class NoteRepository:
@@ -43,42 +38,44 @@ class NoteRepository:
         result = await self._session.execute(select(Note).where(Note.id == note_id))
         return result.scalar_one_or_none()
 
-    async def list_all(
+    async def list_paginated(
         self,
-        page: int = 1,
-        page_size: int = 20,
-        sort: str = "created_at",
-        order: str = "desc",
+        page: int,
+        size: int,
+        sort: str = "-created_at",
+        filter: str | None = None,
     ) -> tuple[list[Note], int]:
         """Return a paginated list of Notes and the total count.
 
         Args:
             page: 1-indexed page number.
-            page_size: Records per page (max 100 enforced in service layer).
-            sort: Column name to sort by — must be in _SORTABLE_COLUMNS.
-            order: "asc" or "desc".
+            size: Records per page.
+            sort: Sort expression — leading '-' means descending.
+                  Recognised fields: 'created_at', 'updated_at'.
+                  Defaults to newest-first ('-created_at').
+            filter: Optional substring to match against note content (LIKE %term%).
 
         Returns:
-            Tuple of (note list, total count).
+            Tuple of (note list, total count matching the filter).
         """
-        # Clamp and validate inputs defensively (service layer also validates).
-        sort = sort if sort in _SORTABLE_COLUMNS else "created_at"
-        order = order if order in _SORT_ORDERS else "desc"
+        # Build base query with optional LIKE filter (D-08).
+        query = select(Note)
+        if filter:
+            query = query.where(Note.content.ilike(f"%{filter}%"))
 
-        sort_column = getattr(Note, sort)
-        sort_expr = sort_column.asc() if order == "asc" else sort_column.desc()
-        offset = (page - 1) * page_size
+        # Accurate filtered total count.
+        count_q = select(func.count()).select_from(query.subquery())
+        total: int = (await self._session.execute(count_q)).scalar_one()
 
-        # Execute count and list queries concurrently.
-        count_result = await self._session.execute(select(func.count()).select_from(Note))
-        total: int = count_result.scalar_one()
+        # Apply sort — leading '-' means descending (D-07).
+        order_col = Note.updated_at if "updated_at" in sort else Note.created_at
+        order_fn = desc if sort.startswith("-") else asc
+        query = query.order_by(order_fn(order_col))
 
-        list_result = await self._session.execute(
-            select(Note).order_by(sort_expr).offset(offset).limit(page_size)
-        )
-        notes = list(list_result.scalars().all())
-
-        return notes, total
+        # Apply pagination.
+        query = query.offset((page - 1) * size).limit(size)
+        result = await self._session.execute(query)
+        return list(result.scalars().all()), total
 
     async def update(self, note: Note, data: NoteUpdate) -> Note:
         """Apply the provided fields from NoteUpdate to the given Note instance.
