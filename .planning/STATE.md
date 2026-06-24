@@ -4,13 +4,13 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Phase 1 context gathered
-last_updated: "2026-06-24T07:19:35.777Z"
+last_updated: "2026-06-24T07:31:40.016Z"
 last_activity: 2026-06-24
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 3
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-06-23)
 ## Current Position
 
 Phase: 01 (repo-foundation) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-06-24
 
-Progress: [███░░░░░░░] 33%
+Progress: [███████░░░] 67%
 
 ## Performance Metrics
 
@@ -53,6 +53,7 @@ Progress: [███░░░░░░░] 33%
 
 *Updated after each plan completion*
 | Phase 01-repo-foundation P01 | 3 | 3 tasks | 5 files |
+| Phase 01-repo-foundation P02 | 12 | 3 tasks | 14 files |
 
 ## Accumulated Context
 
@@ -68,6 +69,9 @@ Recent decisions affecting current work:
 - [Phase ?]: Repo hygiene layer complete
 - [Phase ?]: LF enforcement set
 - [Phase ?]: CI badge deferred to Phase 7
+- [Phase 1 Plan 02]: Python pinned to 3.12 via .python-version — uv defaulted to 3.14; CLAUDE.md requires 3.12
+- [Phase 1 Plan 02]: Used PEP 735 [dependency-groups] instead of deprecated [tool.uv.dev-dependencies]
+- [Phase 1 Plan 02]: Settings extra=ignore — future-phase env vars (MySQL/JWT/Anthropic/Ollama) ignored at Phase-1 startup
 
 ### Pending Todos
 
@@ -86,6 +90,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-24T07:19:35.769Z
-Stopped at: Phase 1 context gathered
+Last session: 2026-06-24T07:31:40.008Z
+Stopped at: Completed 01-02-PLAN.md (FastAPI skeleton)
 Resume file: None
