@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Completed 02-02-PLAN.md (Note CRUD contract + testcontainers)
-last_updated: "2026-06-24T13:22:23.703Z"
+status: verifying
+stopped_at: Completed 02-03-PLAN.md (list pagination/sort/filter hardening)
+last_updated: "2026-06-24T13:33:38.616Z"
 last_activity: 2026-06-24
 progress:
   total_phases: 7
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 6
-  completed_plans: 5
-  percent: 14
+  completed_plans: 6
+  percent: 29
 ---
 
 # Project State
@@ -27,10 +27,10 @@ See: .planning/PROJECT.md (updated 2026-06-23)
 
 Phase: 02 (database-api-skeleton) — EXECUTING
 Plan: 3 of 3
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-06-24
 
-Progress: [████████░░] 83%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -56,6 +56,7 @@ Progress: [████████░░] 83%
 | Phase 01-repo-foundation P02 | 12 | 3 tasks | 14 files |
 | Phase 01-repo-foundation P03 | 40 | 5 tasks | 4 files |
 | Phase 02 P02 | 20 | 3 tasks | 8 files |
+| Phase 02 P03 | 9 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -80,6 +81,8 @@ Recent decisions affecting current work:
 - [Phase ?]: NoteListResponse{items,total,page,size,pages} is the canonical pagination envelope (D-06)
 - [Phase ?]: testcontainers mysql:8.4 + alembic upgrade head replaces SQLite for all Note tests
 - [Phase ?]: Routes at /notes/ (trailing slash) and /notes/{note_id} — httpx does not follow redirects
+- [Phase ?]: Sort whitelist dict maps created_at/updated_at tokens to ORM columns; unknown token raises ValueError→422 (no silent fallback)
+- [Phase ?]: Service layer translates repository ValueError to HTTPException 422 to prevent 500 leaking internal errors (T-02-14)
 
 ### Pending Todos
 
@@ -98,6 +101,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-24T13:22:23.697Z
-Stopped at: Completed 02-02-PLAN.md (Note CRUD contract + testcontainers)
+Last session: 2026-06-24T13:33:38.606Z
+Stopped at: Completed 02-03-PLAN.md (list pagination/sort/filter hardening)
 Resume file: None
