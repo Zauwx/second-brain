@@ -12,7 +12,7 @@ Seven phases, each building on the last. Phase 1 locks in the repo hygiene that 
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Repo Foundation** - Git hygiene, project scaffold, and Docker base that cannot be safely added after the first commit
+- [x] **Phase 1: Repo Foundation** - Git hygiene, project scaffold, and Docker base that cannot be safely added after the first commit (completed 2026-06-24)
 - [ ] **Phase 2: Database + API Skeleton** - Async MySQL, Alembic migrations, Note CRUD, OpenAPI docs, pagination, and tests — all working in Docker
 - [ ] **Phase 3: Auth + Per-User Data Isolation** - JWT auth with refresh tokens, per-user query isolation, and cross-user access tests in CI
 - [ ] **Phase 4: Tags, Collections, Full-Text Search** - Many-to-many tags, collections, MySQL FULLTEXT search, and REST surface polish
@@ -35,7 +35,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 3 plans
 - [x] 01-01-PLAN.md — Repo hygiene + portfolio docs (.gitignore, .gitattributes, .env.example, LICENSE, README)
 - [x] 01-02-PLAN.md — uv-managed FastAPI skeleton: ruff/mypy config, pydantic-settings, GET /health, domain layout
-- [ ] 01-03-PLAN.md — Dockerize (python:3.12-slim) + compose, end-to-end /health via Swagger, create + push public repo
+- [x] 01-03-PLAN.md — Dockerize (python:3.12-slim) + compose, end-to-end /health via Swagger, create + push public repo
 
 ### Phase 2: Database + API Skeleton
 **Goal**: A fully working Note CRUD API backed by async MySQL runs in Docker — Alembic manages the schema, async SQLAlchemy + asyncmy handle all queries, Swagger is the UI, pagination and tests are included
@@ -124,7 +124,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Repo Foundation | 2/3 | In Progress|  |
+| 1. Repo Foundation | 3/3 | Complete   | 2026-06-24 |
 | 2. Database + API Skeleton | 0/TBD | Not started | - |
 | 3. Auth + Per-User Data Isolation | 0/TBD | Not started | - |
 | 4. Tags, Collections, Full-Text Search | 0/TBD | Not started | - |
