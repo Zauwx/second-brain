@@ -1,0 +1,62 @@
+# =============================================================================
+# Second Brain — .dockerignore
+# Prevents secrets and unnecessary files from entering the Docker build context.
+#
+# SECURITY (Pitfall 14 + 20):
+#   .env is excluded here AND the Dockerfile never does COPY .env
+#   Belt-and-suspenders: even if someone mistakenly adds COPY .env, the file
+#   won't exist in the build context, so no secret can be baked into a layer.
+# =============================================================================
+
+# --- SECRETS (critical — must always come first) ---
+.env
+.env.prod
+.env.local
+.env.*.local
+
+# --- Python virtual environment (large; deps installed inside image via uv) ---
+.venv/
+venv/
+env/
+ENV/
+
+# --- Python bytecode and caches ---
+__pycache__/
+*.py[cod]
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.dmypy.json
+.ruff_cache/
+
+# --- Git ---
+.git/
+.gitignore
+.gitattributes
+
+# --- Tests (not needed in production image) ---
+tests/
+
+# --- Planning and documentation ---
+.planning/
+*.md
+
+# --- IDE and editor ---
+.idea/
+.vscode/
+*.code-workspace
+*.swp
+*.swo
+*~
+
+# --- OS artifacts ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Logs and runtime ---
+*.log
+logs/
+*.pid
