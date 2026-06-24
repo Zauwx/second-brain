@@ -1,0 +1,107 @@
+# =============================================================================
+# Second Brain — .gitignore
+# Python + Docker + IDE standards
+# =============================================================================
+
+# =============================================================================
+# SECRETS — The most critical rule: .env must NEVER enter git history
+# See PITFALLS.md Pitfall 14: Secrets in git = irreversible exposure on public repo
+# =============================================================================
+.env
+.env.prod
+.env.local
+.env.*.local
+
+# Keep the committed template — do NOT ignore it
+!.env.example
+
+# =============================================================================
+# Python
+# =============================================================================
+__pycache__/
+*.py[cod]
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Distribution / packaging
+*.egg-info/
+*.egg
+dist/
+build/
+*.whl
+
+# Test and coverage
+.pytest_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# Type checkers
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Ruff cache
+.ruff_cache/
+
+# uv — do NOT ignore uv.lock (it must be committed)
+# uv.lock is intentionally committed for reproducible installs
+
+# =============================================================================
+# Docker
+# =============================================================================
+# Never COPY .env into Docker build context
+# (enforced by .dockerignore too, but belt-and-suspenders)
+
+# =============================================================================
+# IDE and Editor
+# =============================================================================
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# Vim / Emacs
+*.swp
+*.swo
+*~
+\#*\#
+
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+ehthumbs.db
+desktop.ini
+
+# =============================================================================
+# Logs and runtime
+# =============================================================================
+*.log
+logs/
+*.pid
+*.sock
+
+# =============================================================================
+# Misc
+# =============================================================================
+*.bak
+*.tmp
+*.orig

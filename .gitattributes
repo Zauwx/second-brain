@@ -1,0 +1,49 @@
+# Force LF line endings for all text files (prevents /bin/bash^M errors in Linux containers)
+# See PITFALLS.md Pitfall 15
+* text=auto eol=lf
+
+# Shell scripts — always LF (critical: CRLF breaks bash interpreter in Linux containers)
+*.sh text eol=lf
+
+# Python source files
+*.py text eol=lf
+
+# Docker files
+Dockerfile text eol=lf
+Dockerfile.* text eol=lf
+docker-compose*.yml text eol=lf
+.dockerignore text eol=lf
+
+# Config files
+*.toml text eol=lf
+*.cfg text eol=lf
+*.ini text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.json text eol=lf
+*.env text eol=lf
+*.env.example text eol=lf
+
+# Documentation and text
+*.md text eol=lf
+*.txt text eol=lf
+*.rst text eol=lf
+
+# SQL
+*.sql text eol=lf
+
+# Git
+.gitignore text eol=lf
+.gitattributes text eol=lf
+
+# Binary files — no EOL conversion
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.svg binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
