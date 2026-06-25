@@ -64,7 +64,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   5. Calling any protected endpoint with no token or an expired token returns 401
 **Plans**: 3 plans
 - [x] 03-01-PLAN.md - Auth foundation: app/auth/ package, users+refresh_tokens migration, POST /auth/register + /auth/login
-- [ ] 03-02-PLAN.md - Token lifecycle: get_current_user dependency, POST /auth/refresh (rotation) + /auth/logout, 401 handling
+- [x] 03-02-PLAN.md - Token lifecycle: get_current_user dependency, POST /auth/refresh (rotation) + /auth/logout, 401 handling
 - [ ] 03-03-PLAN.md - Per-user isolation: notes.user_id FK, protect+scope notes endpoints (403/404), cross-user isolation tests
 
 ### Phase 4: Tags, Collections, Full-Text Search
@@ -129,7 +129,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 |-------|----------------|--------|-----------|
 | 1. Repo Foundation | 3/3 | Complete   | 2026-06-24 |
 | 2. Database + API Skeleton | 3/3 | Complete   | 2026-06-24 |
-| 3. Auth + Per-User Data Isolation | 1/3 | In Progress|  |
+| 3. Auth + Per-User Data Isolation | 2/3 | In Progress|  |
 | 4. Tags, Collections, Full-Text Search | 0/TBD | Not started | - |
 | 5. Local AI (Ollama) | 0/TBD | Not started | - |
 | 6. RAG Pipeline | 0/TBD | Not started | - |
