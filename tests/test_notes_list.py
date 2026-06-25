@@ -24,18 +24,18 @@ import httpx
 # ---------------------------------------------------------------------------
 
 
-async def test_list_notes_envelope_keys(client: httpx.AsyncClient) -> None:
+async def test_list_notes_envelope_keys(auth_client: httpx.AsyncClient) -> None:
     """GET /notes/ should return 200 with exactly {items, total, page, size, pages}."""
-    response = await client.get("/notes/")
+    response = await auth_client.get("/notes/")
     assert response.status_code == 200
 
     data = response.json()
     assert set(data.keys()) >= {"items", "total", "page", "size", "pages"}
 
 
-async def test_list_notes_default_page_and_size(client: httpx.AsyncClient) -> None:
+async def test_list_notes_default_page_and_size(auth_client: httpx.AsyncClient) -> None:
     """GET /notes/ with no query params should default to page=1, size=20."""
-    response = await client.get("/notes/")
+    response = await auth_client.get("/notes/")
     assert response.status_code == 200
 
     data = response.json()
@@ -48,14 +48,14 @@ async def test_list_notes_default_page_and_size(client: httpx.AsyncClient) -> No
 # ---------------------------------------------------------------------------
 
 
-async def test_pagination_math_page_2(client: httpx.AsyncClient) -> None:
+async def test_pagination_math_page_2(auth_client: httpx.AsyncClient) -> None:
     """5 seeded notes, ?page=2&size=2 → len(items)==2, total==5, page==2, size==2, pages==3."""
     # Seed 5 notes via POST (creates deterministic ordering by created_at)
     for i in range(5):
-        r = await client.post("/notes/", json={"content": f"pagination seed note {i}"})
+        r = await auth_client.post("/notes/", json={"content": f"pagination seed note {i}"})
         assert r.status_code == 201
 
-    response = await client.get("/notes/?page=2&size=2")
+    response = await auth_client.get("/notes/?page=2&size=2")
     assert response.status_code == 200
 
     data = response.json()
@@ -71,21 +71,21 @@ async def test_pagination_math_page_2(client: httpx.AsyncClient) -> None:
 # ---------------------------------------------------------------------------
 
 
-async def test_size_over_max_returns_422(client: httpx.AsyncClient) -> None:
+async def test_size_over_max_returns_422(auth_client: httpx.AsyncClient) -> None:
     """GET /notes/?size=101 should return 422 (D-05: max size is 100)."""
-    response = await client.get("/notes/?size=101")
+    response = await auth_client.get("/notes/?size=101")
     assert response.status_code == 422
 
 
-async def test_size_zero_returns_422(client: httpx.AsyncClient) -> None:
+async def test_size_zero_returns_422(auth_client: httpx.AsyncClient) -> None:
     """GET /notes/?size=0 should return 422 (D-05: size ge=1)."""
-    response = await client.get("/notes/?size=0")
+    response = await auth_client.get("/notes/?size=0")
     assert response.status_code == 422
 
 
-async def test_page_zero_returns_422(client: httpx.AsyncClient) -> None:
+async def test_page_zero_returns_422(auth_client: httpx.AsyncClient) -> None:
     """GET /notes/?page=0 should return 422 (D-05: page ge=1)."""
-    response = await client.get("/notes/?page=0")
+    response = await auth_client.get("/notes/?page=0")
     assert response.status_code == 422
 
 
@@ -94,17 +94,17 @@ async def test_page_zero_returns_422(client: httpx.AsyncClient) -> None:
 # ---------------------------------------------------------------------------
 
 
-async def test_sort_created_at_ascending_oldest_first(client: httpx.AsyncClient) -> None:
+async def test_sort_created_at_ascending_oldest_first(auth_client: httpx.AsyncClient) -> None:
     """?sort=created_at should return oldest notes first (ascending order).
 
     Verifies created_at values are in non-decreasing order.
     MySQL DATETIME has 1-second granularity, so ties are allowed.
     """
     for i in range(3):
-        r = await client.post("/notes/", json={"content": f"sort test ascending {i}"})
+        r = await auth_client.post("/notes/", json={"content": f"sort test ascending {i}"})
         assert r.status_code == 201
 
-    response = await client.get("/notes/?sort=created_at")
+    response = await auth_client.get("/notes/?sort=created_at")
     assert response.status_code == 200
 
     items = response.json()["items"]
@@ -119,18 +119,18 @@ async def test_sort_created_at_ascending_oldest_first(client: httpx.AsyncClient)
         )
 
 
-async def test_sort_default_desc_newest_first(client: httpx.AsyncClient) -> None:
+async def test_sort_default_desc_newest_first(auth_client: httpx.AsyncClient) -> None:
     """Default sort (-created_at) should return newest notes first (descending order).
 
     Verifies created_at values are in non-increasing order.
     MySQL DATETIME has 1-second granularity, so ties are allowed.
     """
     for i in range(3):
-        r = await client.post("/notes/", json={"content": f"sort test descending {i}"})
+        r = await auth_client.post("/notes/", json={"content": f"sort test descending {i}"})
         assert r.status_code == 201
 
     # Default sort = -created_at (newest first)
-    response = await client.get("/notes/")
+    response = await auth_client.get("/notes/")
     assert response.status_code == 200
 
     items = response.json()["items"]
@@ -145,7 +145,7 @@ async def test_sort_default_desc_newest_first(client: httpx.AsyncClient) -> None
         )
 
 
-async def test_sort_created_at_opposite_order_from_default(client: httpx.AsyncClient) -> None:
+async def test_sort_created_at_opposite_order_from_default(auth_client: httpx.AsyncClient) -> None:
     """?sort=created_at (asc) and default -created_at (desc) return opposite sort direction.
 
     Verifies that asc produces non-decreasing created_at values and desc produces
@@ -153,11 +153,11 @@ async def test_sort_created_at_opposite_order_from_default(client: httpx.AsyncCl
     this test handles ties correctly via the monotone direction check.
     """
     for i in range(3):
-        r = await client.post("/notes/", json={"content": f"sort direction check {i}"})
+        r = await auth_client.post("/notes/", json={"content": f"sort direction check {i}"})
         assert r.status_code == 201
 
-    asc_response = await client.get("/notes/?sort=created_at")
-    desc_response = await client.get("/notes/")
+    asc_response = await auth_client.get("/notes/?sort=created_at")
+    desc_response = await auth_client.get("/notes/")
 
     assert asc_response.status_code == 200
     assert desc_response.status_code == 200
@@ -185,9 +185,9 @@ async def test_sort_created_at_opposite_order_from_default(client: httpx.AsyncCl
         )
 
 
-async def test_sort_updated_at_returns_200(client: httpx.AsyncClient) -> None:
+async def test_sort_updated_at_returns_200(auth_client: httpx.AsyncClient) -> None:
     """?sort=updated_at should return 200 (updated_at is a whitelisted sort field, D-07)."""
-    response = await client.get("/notes/?sort=updated_at")
+    response = await auth_client.get("/notes/?sort=updated_at")
     assert response.status_code == 200
 
 
@@ -196,15 +196,15 @@ async def test_sort_updated_at_returns_200(client: httpx.AsyncClient) -> None:
 # ---------------------------------------------------------------------------
 
 
-async def test_sort_content_returns_422(client: httpx.AsyncClient) -> None:
+async def test_sort_content_returns_422(auth_client: httpx.AsyncClient) -> None:
     """?sort=content should return 422 (content is not a whitelisted sort field, D-07/D-09)."""
-    response = await client.get("/notes/?sort=content")
+    response = await auth_client.get("/notes/?sort=content")
     assert response.status_code == 422
 
 
-async def test_sort_evil_returns_422(client: httpx.AsyncClient) -> None:
+async def test_sort_evil_returns_422(auth_client: httpx.AsyncClient) -> None:
     """?sort=evil should return 422 (unknown sort field, D-07/D-09)."""
-    response = await client.get("/notes/?sort=evil")
+    response = await auth_client.get("/notes/?sort=evil")
     assert response.status_code == 422
 
 
@@ -213,12 +213,12 @@ async def test_sort_evil_returns_422(client: httpx.AsyncClient) -> None:
 # ---------------------------------------------------------------------------
 
 
-async def test_filter_case_insensitive_lowercase(client: httpx.AsyncClient) -> None:
+async def test_filter_case_insensitive_lowercase(auth_client: httpx.AsyncClient) -> None:
     """?filter=dock should match notes containing 'docker' (case-insensitive, D-08)."""
-    await client.post("/notes/", json={"content": "Learning docker compose and networking"})
-    await client.post("/notes/", json={"content": "Python async programming"})
+    await auth_client.post("/notes/", json={"content": "Learning docker compose and networking"})
+    await auth_client.post("/notes/", json={"content": "Python async programming"})
 
-    response = await client.get("/notes/?filter=dock")
+    response = await auth_client.get("/notes/?filter=dock")
     assert response.status_code == 200
 
     data = response.json()
@@ -232,12 +232,12 @@ async def test_filter_case_insensitive_lowercase(client: httpx.AsyncClient) -> N
     assert data["total"] == len(data["items"])
 
 
-async def test_filter_case_insensitive_uppercase(client: httpx.AsyncClient) -> None:
+async def test_filter_case_insensitive_uppercase(auth_client: httpx.AsyncClient) -> None:
     """?filter=DOCK should also match notes containing 'docker' (case-insensitive, D-08)."""
-    await client.post("/notes/", json={"content": "Running docker containers in production"})
-    await client.post("/notes/", json={"content": "MySQL indexing strategies"})
+    await auth_client.post("/notes/", json={"content": "Running docker containers in production"})
+    await auth_client.post("/notes/", json={"content": "MySQL indexing strategies"})
 
-    response = await client.get("/notes/?filter=DOCK")
+    response = await auth_client.get("/notes/?filter=DOCK")
     assert response.status_code == 200
 
     data = response.json()
@@ -249,21 +249,21 @@ async def test_filter_case_insensitive_uppercase(client: httpx.AsyncClient) -> N
         )
 
 
-async def test_filter_total_reflects_filtered_count(client: httpx.AsyncClient) -> None:
+async def test_filter_total_reflects_filtered_count(auth_client: httpx.AsyncClient) -> None:
     """total in the envelope should equal the count of filtered matches, not all notes."""
-    await client.post("/notes/", json={"content": "docker volume management"})
-    await client.post("/notes/", json={"content": "FastAPI dependency injection"})
-    await client.post("/notes/", json={"content": "docker network bridge mode"})
+    await auth_client.post("/notes/", json={"content": "docker volume management"})
+    await auth_client.post("/notes/", json={"content": "FastAPI dependency injection"})
+    await auth_client.post("/notes/", json={"content": "docker network bridge mode"})
 
     # Filter for docker notes
-    filtered_response = await client.get("/notes/?filter=docker")
+    filtered_response = await auth_client.get("/notes/?filter=docker")
     assert filtered_response.status_code == 200
 
     filtered_data = filtered_response.json()
     assert filtered_data["total"] >= 2  # at least 2 docker notes seeded
 
     # Unfiltered total must be >= filtered total
-    unfiltered_response = await client.get("/notes/")
+    unfiltered_response = await auth_client.get("/notes/")
     assert unfiltered_response.status_code == 200
     unfiltered_total = unfiltered_response.json()["total"]
 
@@ -279,12 +279,12 @@ async def test_filter_total_reflects_filtered_count(client: httpx.AsyncClient) -
 # ---------------------------------------------------------------------------
 
 
-async def test_no_match_filter_returns_empty(client: httpx.AsyncClient) -> None:
+async def test_no_match_filter_returns_empty(auth_client: httpx.AsyncClient) -> None:
     """?filter=zzz_no_match should return items==[], total==0, pages==0."""
     # Seed a note to ensure the DB is non-empty
-    await client.post("/notes/", json={"content": "Some content for empty filter test"})
+    await auth_client.post("/notes/", json={"content": "Some content for empty filter test"})
 
-    response = await client.get("/notes/?filter=zzz_no_match_xqz")
+    response = await auth_client.get("/notes/?filter=zzz_no_match_xqz")
     assert response.status_code == 200
 
     data = response.json()

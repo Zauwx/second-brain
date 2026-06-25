@@ -7,6 +7,7 @@ Design principles:
 - Sort parsing: a leading '-' in `sort` means descending (e.g. '-created_at').
   Only whitelisted fields are accepted — unknown tokens raise ValueError (D-07, T-02-11).
 - Filter: optional case-insensitive substring match on `content` via LIKE (D-08, T-02-12).
+- Phase 3: all queries scoped to the authenticated owner via user_id (D-07, D-09, D-10).
 """
 
 from datetime import datetime
@@ -32,12 +33,18 @@ class NoteRepository:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    async def create(self, data: NoteCreate) -> Note:
-        """Insert a new Note row and return the persisted model instance."""
+    async def create(self, data: NoteCreate, user_id: int) -> Note:
+        """Insert a new Note row and return the persisted model instance.
+
+        Args:
+            data:    Validated note creation fields (D-10: user_id is NOT in NoteCreate).
+            user_id: The owning user's id — assigned server-side, never from the client body.
+        """
         note = Note(
             title=data.title,
             content=data.content,
             source_url=data.source_url,
+            user_id=user_id,
         )
         self._session.add(note)
         await self._session.commit()
@@ -45,7 +52,11 @@ class NoteRepository:
         return note
 
     async def get_by_id(self, note_id: int) -> Note | None:
-        """Return the Note with the given id, or None if not found."""
+        """Return the Note with the given id, or None if not found.
+
+        Ownership check is NOT performed here — that is the service's responsibility (D-08).
+        The repository always fetches by PK only; NoteService.get_or_404_owned checks owner.
+        """
         result = await self._session.execute(select(Note).where(Note.id == note_id))
         return result.scalar_one_or_none()
 
@@ -55,20 +66,24 @@ class NoteRepository:
         size: int,
         sort: str = "-created_at",
         filter: str | None = None,
+        *,
+        user_id: int,
     ) -> tuple[list[Note], int]:
-        """Return a paginated list of Notes and the total count.
+        """Return a paginated list of Notes owned by `user_id` and the owner-scoped count.
 
         Args:
-            page: 1-indexed page number.
-            size: Records per page.
-            sort: Sort expression — leading '-' means descending.
-                  Allowed fields: 'created_at', 'updated_at' (D-07).
-                  Defaults to newest-first ('-created_at').
-                  Raises ValueError if the field token is not in the whitelist (T-02-11).
-            filter: Optional substring to match against note content (LIKE %term%, D-08).
+            page:    1-indexed page number.
+            size:    Records per page.
+            sort:    Sort expression — leading '-' means descending.
+                     Allowed fields: 'created_at', 'updated_at' (D-07).
+                     Defaults to newest-first ('-created_at').
+                     Raises ValueError if the field token is not in the whitelist (T-02-11).
+            filter:  Optional substring to match against note content (LIKE %term%, D-08).
+            user_id: Scope all results to this owner (D-09). Keyword-only to prevent
+                     accidental positional misuse.
 
         Returns:
-            Tuple of (note list, total count matching the filter).
+            Tuple of (note list, total count matching the owner + optional filter).
 
         Raises:
             ValueError: If `sort` contains a field token not in the whitelist.
@@ -84,15 +99,19 @@ class NoteRepository:
         order_col = _SORT_WHITELIST[token]
         order_fn = desc if descending else asc
 
-        # --- Build base query with optional LIKE filter (D-08, T-02-12) ---
-        # ilike() binds the user value as a parameter — the f-string only adds wildcards
-        # around an already-escaped bound value, not raw SQL text.
+        # --- Build base query scoped to owner (D-09) ---
+        # user_id filter must be applied BEFORE the optional content filter so that
+        # both the count subquery and the page query are owner-scoped.
         query = select(Note)
+        query = query.where(Note.user_id == user_id)
         if filter:
+            # ilike() binds the user value as a parameter — the f-string only adds wildcards
+            # around an already-escaped bound value, not raw SQL text.
             query = query.where(Note.content.ilike(f"%{filter}%"))
 
         # --- Accurate filtered total count (BEFORE offset/limit) ---
-        # Count is computed over the filtered subquery so it reflects matches, not page length.
+        # Count is computed over the owner-scoped (+ filtered) subquery so it reflects
+        # matches for this user, not the full collection.
         count_q = select(func.count()).select_from(query.subquery())
         total: int = (await self._session.execute(count_q)).scalar_one()
 

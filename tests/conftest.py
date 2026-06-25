@@ -138,3 +138,76 @@ async def auth_client(client: httpx.AsyncClient, registered_user: dict) -> httpx
     token = resp.json()["access_token"]
     client.headers["Authorization"] = f"Bearer {token}"
     return client
+
+
+@pytest_asyncio.fixture
+async def user_a_client(session: AsyncSession) -> AsyncClient:
+    """Authenticated AsyncClient for user A (a@example.com) — cross-user isolation tests.
+
+    Creates a SEPARATE AsyncClient (not sharing headers with the `client` fixture) so
+    user A and user B can hold independent Authorization headers simultaneously.
+    The same get_db override session is used so both clients share the transaction
+    that will be rolled back at teardown (Pitfall 8 — dependency_overrides.clear() runs).
+    """
+
+    async def override_get_db():
+        yield session
+
+    app.dependency_overrides[get_db] = override_get_db
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        # Register user A
+        reg = await ac.post(
+            "/auth/register",
+            json={"email": "a@example.com", "password": "Test1234!"},
+        )
+        assert reg.status_code == 201, f"user_a register failed: {reg.json()}"
+
+        # Login as user A
+        login = await ac.post(
+            "/auth/login",
+            json={"email": "a@example.com", "password": "Test1234!"},
+        )
+        assert login.status_code == 200, f"user_a login failed: {login.json()}"
+        ac.headers["Authorization"] = f"Bearer {login.json()['access_token']}"
+        yield ac
+
+    app.dependency_overrides.clear()
+
+
+@pytest_asyncio.fixture
+async def user_b_client(session: AsyncSession) -> AsyncClient:
+    """Authenticated AsyncClient for user B (b@example.com) — cross-user isolation tests.
+
+    Creates a SEPARATE AsyncClient from user_a_client so each user holds their own
+    Authorization header. Both fixtures share the same `session` transaction (rolled back
+    at teardown).
+
+    NOTE: When used together with user_a_client in the same test, the second fixture's
+    dependency_overrides.clear() at teardown clears the override set by both fixtures.
+    This is safe because both fixtures set the same override (same session).
+    """
+
+    async def override_get_db():
+        yield session
+
+    app.dependency_overrides[get_db] = override_get_db
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        # Register user B
+        reg = await ac.post(
+            "/auth/register",
+            json={"email": "b@example.com", "password": "Test1234!"},
+        )
+        assert reg.status_code == 201, f"user_b register failed: {reg.json()}"
+
+        # Login as user B
+        login = await ac.post(
+            "/auth/login",
+            json={"email": "b@example.com", "password": "Test1234!"},
+        )
+        assert login.status_code == 200, f"user_b login failed: {login.json()}"
+        ac.headers["Authorization"] = f"Bearer {login.json()['access_token']}"
+        yield ac
+
+    app.dependency_overrides.clear()

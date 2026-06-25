@@ -24,9 +24,9 @@ Coverage:
 import httpx
 
 
-async def test_create_note_returns_201(client: httpx.AsyncClient) -> None:
+async def test_create_note_returns_201(auth_client: httpx.AsyncClient) -> None:
     """POST /notes/ with valid body should return 201 and the created note."""
-    response = await client.post("/notes/", json={"content": "hello"})
+    response = await auth_client.post("/notes/", json={"content": "hello"})
     assert response.status_code == 201
 
     data = response.json()
@@ -35,9 +35,9 @@ async def test_create_note_returns_201(client: httpx.AsyncClient) -> None:
     assert "created_at" in data
 
 
-async def test_create_note_with_source_url(client: httpx.AsyncClient) -> None:
+async def test_create_note_with_source_url(auth_client: httpx.AsyncClient) -> None:
     """POST /notes/ with source_url should echo it back in the response."""
-    response = await client.post(
+    response = await auth_client.post(
         "/notes/", json={"content": "x", "source_url": "https://e.com"}
     )
     assert response.status_code == 201
@@ -45,18 +45,18 @@ async def test_create_note_with_source_url(client: httpx.AsyncClient) -> None:
     assert data["source_url"] == "https://e.com"
 
 
-async def test_create_note_missing_content_returns_422(client: httpx.AsyncClient) -> None:
+async def test_create_note_missing_content_returns_422(auth_client: httpx.AsyncClient) -> None:
     """POST /notes/ without content should return 422 (FastAPI validation)."""
-    response = await client.post("/notes/", json={"title": "No content"})
+    response = await auth_client.post("/notes/", json={"title": "No content"})
     assert response.status_code == 422
 
 
-async def test_get_note_returns_200(client: httpx.AsyncClient) -> None:
+async def test_get_note_returns_200(auth_client: httpx.AsyncClient) -> None:
     """GET /notes/{id} should return 200 and the note body after creation."""
-    create_resp = await client.post("/notes/", json={"content": "Content for retrieval test"})
+    create_resp = await auth_client.post("/notes/", json={"content": "Content for retrieval test"})
     note_id = create_resp.json()["id"]
 
-    response = await client.get(f"/notes/{note_id}")
+    response = await auth_client.get(f"/notes/{note_id}")
     assert response.status_code == 200
 
     data = response.json()
@@ -64,20 +64,20 @@ async def test_get_note_returns_200(client: httpx.AsyncClient) -> None:
     assert data["content"] == "Content for retrieval test"
 
 
-async def test_get_nonexistent_note_returns_404(client: httpx.AsyncClient) -> None:
+async def test_get_nonexistent_note_returns_404(auth_client: httpx.AsyncClient) -> None:
     """GET /notes/999999 should return 404 with detail 'Note not found'."""
-    response = await client.get("/notes/999999")
+    response = await auth_client.get("/notes/999999")
     assert response.status_code == 404
     assert response.json()["detail"] == "Note not found"
 
 
-async def test_update_note_returns_200(client: httpx.AsyncClient) -> None:
+async def test_update_note_returns_200(auth_client: httpx.AsyncClient) -> None:
     """PUT /notes/{id} should return 200 with updated content."""
-    create_resp = await client.post("/notes/", json={"content": "original"})
+    create_resp = await auth_client.post("/notes/", json={"content": "original"})
     note_id = create_resp.json()["id"]
     created_at = create_resp.json()["created_at"]
 
-    update_resp = await client.put(f"/notes/{note_id}", json={"content": "edited"})
+    update_resp = await auth_client.put(f"/notes/{note_id}", json={"content": "edited"})
     assert update_resp.status_code == 200
 
     data = update_resp.json()
@@ -85,22 +85,22 @@ async def test_update_note_returns_200(client: httpx.AsyncClient) -> None:
     assert data["updated_at"] >= created_at
 
 
-async def test_delete_note_returns_204_then_404(client: httpx.AsyncClient) -> None:
+async def test_delete_note_returns_204_then_404(auth_client: httpx.AsyncClient) -> None:
     """DELETE /notes/{id} should return 204; subsequent GET should return 404."""
-    create_resp = await client.post("/notes/", json={"content": "To be deleted"})
+    create_resp = await auth_client.post("/notes/", json={"content": "To be deleted"})
     note_id = create_resp.json()["id"]
 
-    delete_resp = await client.delete(f"/notes/{note_id}")
+    delete_resp = await auth_client.delete(f"/notes/{note_id}")
     assert delete_resp.status_code == 204
     assert delete_resp.content == b""
 
-    get_resp = await client.get(f"/notes/{note_id}")
+    get_resp = await auth_client.get(f"/notes/{note_id}")
     assert get_resp.status_code == 404
 
 
-async def test_list_notes_returns_envelope(client: httpx.AsyncClient) -> None:
+async def test_list_notes_returns_envelope(auth_client: httpx.AsyncClient) -> None:
     """GET /notes/ should return 200 with envelope keys {items,total,page,size,pages}."""
-    response = await client.get("/notes/")
+    response = await auth_client.get("/notes/")
     assert response.status_code == 200
 
     data = response.json()
@@ -111,15 +111,15 @@ async def test_list_notes_returns_envelope(client: httpx.AsyncClient) -> None:
     assert "pages" in data
 
 
-async def test_list_notes_oversized_page_returns_422(client: httpx.AsyncClient) -> None:
+async def test_list_notes_oversized_page_returns_422(auth_client: httpx.AsyncClient) -> None:
     """GET /notes/?size=101 should return 422 (size bounded at 100 via Query le=100)."""
-    response = await client.get("/notes/?size=101")
+    response = await auth_client.get("/notes/?size=101")
     assert response.status_code == 422
 
 
-async def test_openapi_includes_notes_paths(client: httpx.AsyncClient) -> None:
+async def test_openapi_includes_notes_paths(auth_client: httpx.AsyncClient) -> None:
     """GET /openapi.json should include /notes/ and /notes/{note_id} paths."""
-    response = await client.get("/openapi.json")
+    response = await auth_client.get("/openapi.json")
     assert response.status_code == 200
 
     paths = response.json()["paths"]

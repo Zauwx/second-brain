@@ -18,12 +18,16 @@ Relationships:
 from __future__ import annotations
 
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, String, func
 from sqlalchemy.dialects.mysql import INTEGER
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
+
+if TYPE_CHECKING:
+    from app.notes.models import Note
 
 
 class User(Base):
@@ -53,7 +57,12 @@ class User(Base):
         onupdate=func.now(),
     )
 
-    # User.notes relationship deferred to Plan 02/03 when user_id FK is added to notes table.
+    # User.notes — one-to-many; FK added in Phase 3 (0003_add_user_id_to_notes migration).
+    notes: Mapped[list[Note]] = relationship(
+        "Note",
+        back_populates="owner",
+        cascade="all, delete-orphan",
+    )
     # RefreshToken relationship — this migration creates refresh_tokens with user_id FK.
     refresh_tokens: Mapped[list[RefreshToken]] = relationship(
         "RefreshToken",
