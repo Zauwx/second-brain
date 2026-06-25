@@ -6,20 +6,31 @@ Phase 2 scope:
 - FULLTEXT index on (title, content) is created by the Alembic migration — enables
   MATCH ... AGAINST ... IN BOOLEAN MODE search in Phase 4.
 
+Phase 3 additions:
+- `user_id` FK → users.id (NOT NULL, indexed) — per-user data isolation (D-07)
+- `owner` relationship back-refs to User.notes (added when FK migration lands)
+
 Column notes:
 - `title`      VARCHAR(512)  — nullable; a note may be content-only (e.g., a quick clip)
 - `content`    LONGTEXT      — NOT NULL; the primary data
 - `source_url` VARCHAR(2048) — nullable; URL of the original article/page
+- `user_id`    INTEGER UNSIGNED — NOT NULL FK → users.id; owner of the note
 - `created_at` / `updated_at` — managed by the DB (DEFAULT / ON UPDATE CURRENT_TIMESTAMP)
 """
 
-from datetime import datetime
+from __future__ import annotations
 
-from sqlalchemy import DateTime, String, Text, func
+from datetime import datetime
+from typing import TYPE_CHECKING
+
+from sqlalchemy import DateTime, ForeignKey, String, Text, func
 from sqlalchemy.dialects.mysql import INTEGER
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
+
+if TYPE_CHECKING:
+    from app.auth.models import User
 
 
 class Note(Base):
@@ -46,6 +57,14 @@ class Note(Base):
     source_url: Mapped[str | None] = mapped_column(
         String(2048), nullable=True, comment="URL of the original source"
     )
+    user_id: Mapped[int] = mapped_column(
+        INTEGER(unsigned=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+        comment="Owner user — added Phase 3",
+    )
+    owner: Mapped[User] = relationship("User", back_populates="notes")
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,

@@ -71,6 +71,7 @@ class NoteRead(BaseModel):
     title: str | None
     content: str
     source_url: str | None
+    user_id: int
     created_at: datetime
     updated_at: datetime
 
