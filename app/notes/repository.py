@@ -122,9 +122,12 @@ class NoteRepository:
         return list(result.scalars().all()), total
 
     async def update(self, note: Note, data: NoteUpdate) -> Note:
-        """Apply the provided fields from NoteUpdate to the given Note instance.
+        """Apply the explicitly-set fields from NoteUpdate to the Note instance.
 
-        Only non-None fields in `data` are applied — allows partial updates.
+        Uses ``exclude_unset=True``: only fields the client actually sent are
+        applied (partial update). An explicitly-sent ``null`` IS included, so
+        ``{"title": null}`` clears the column — matching the schema docstring
+        "set to null to clear" (WR-06). Omitted fields are left untouched.
         """
         update_data = data.model_dump(exclude_unset=True)
         for field, value in update_data.items():

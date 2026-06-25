@@ -85,6 +85,36 @@ async def test_update_note_returns_200(auth_client: httpx.AsyncClient) -> None:
     assert data["updated_at"] >= created_at
 
 
+async def test_update_note_clears_title_with_null(auth_client: httpx.AsyncClient) -> None:
+    """PUT {"title": null} must clear the title column (WR-06 — explicit-null clear)."""
+    create_resp = await auth_client.post(
+        "/notes/", json={"content": "body", "title": "Some title"}
+    )
+    note_id = create_resp.json()["id"]
+    assert create_resp.json()["title"] == "Some title"
+
+    update_resp = await auth_client.put(f"/notes/{note_id}", json={"title": None})
+    assert update_resp.status_code == 200
+    assert update_resp.json()["title"] is None
+
+    # Persisted: a fresh GET must also report the cleared title.
+    get_resp = await auth_client.get(f"/notes/{note_id}")
+    assert get_resp.json()["title"] is None
+
+
+async def test_update_note_omitted_title_is_untouched(auth_client: httpx.AsyncClient) -> None:
+    """PUT without title must leave the existing title intact (WR-06 — partial update)."""
+    create_resp = await auth_client.post(
+        "/notes/", json={"content": "body", "title": "Keep me"}
+    )
+    note_id = create_resp.json()["id"]
+
+    update_resp = await auth_client.put(f"/notes/{note_id}", json={"content": "new body"})
+    assert update_resp.status_code == 200
+    assert update_resp.json()["title"] == "Keep me"
+    assert update_resp.json()["content"] == "new body"
+
+
 async def test_delete_note_returns_204_then_404(auth_client: httpx.AsyncClient) -> None:
     """DELETE /notes/{id} should return 204; subsequent GET should return 404."""
     create_resp = await auth_client.post("/notes/", json={"content": "To be deleted"})
