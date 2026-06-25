@@ -132,3 +132,110 @@ class AuthService:
             access_token=access_token,
             refresh_token=refresh_token_str,
         )
+
+    async def rotate_refresh_token(self, refresh_token_str: str) -> TokenResponse:
+        """Rotate a refresh token: revoke old jti, issue new access + refresh pair.
+
+        Implements D-04 (rotation) and D-06 (minimal reuse handling: revoked/absent jti → 401,
+        no cascade). Only the presented token's jti is rotated — other tokens for the same
+        user are unaffected (D-03, T-03-14).
+
+        Args:
+            refresh_token_str: The raw JWT string from the client body.
+
+        Returns:
+            TokenResponse with a new access_token and a new refresh_token.
+
+        Raises:
+            HTTPException 401: On invalid signature, expired token, missing jti,
+                or jti already revoked/not found in DB.
+        """
+        try:
+            payload = jwt.decode(
+                refresh_token_str,
+                settings.jwt_secret_key,
+                algorithms=[settings.jwt_algorithm],
+            )
+        except (jwt.ExpiredSignatureError, jwt.InvalidTokenError) as exc:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid refresh token",
+                headers={"WWW-Authenticate": "Bearer"},
+            ) from exc
+
+        jti: str | None = payload.get("jti")
+        user_id_str: str | None = payload.get("sub")
+        if not jti or user_id_str is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid refresh token",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        # DB check — jti must exist and not be revoked (D-06: replay of revoked jti → 401)
+        token_record = await self._repo.get_refresh_token_by_jti(jti)
+        if token_record is None or token_record.revoked:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Refresh token revoked or not found",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        # Rotation: revoke old jti, issue new pair (D-04)
+        await self._repo.revoke_refresh_token(token_record)
+
+        user_id = int(user_id_str)
+        new_access = create_access_token(
+            user_id,
+            settings.jwt_secret_key,
+            settings.access_token_expire_minutes,
+        )
+        new_refresh_str, new_jti = create_refresh_token(
+            user_id,
+            settings.jwt_secret_key,
+            settings.refresh_token_expire_days,
+        )
+        new_expires_at = datetime.now(UTC) + timedelta(
+            days=settings.refresh_token_expire_days
+        )
+        await self._repo.create_refresh_token(user_id, new_jti, new_expires_at)
+
+        return TokenResponse(
+            access_token=new_access,
+            refresh_token=new_refresh_str,
+        )
+
+    async def logout(self, refresh_token_str: str) -> None:
+        """Revoke the given refresh token's jti (D-05).
+
+        A subsequent /auth/refresh with the same token will return 401 (T-03-11).
+        No cascade revocation — only this token's jti is revoked (D-06).
+        If the token is already revoked or not found, the call is a no-op (idempotent).
+
+        Args:
+            refresh_token_str: The raw JWT string from the client body.
+
+        Raises:
+            HTTPException 401: If the JWT cannot be decoded (undecodable token).
+        """
+        try:
+            payload = jwt.decode(
+                refresh_token_str,
+                settings.jwt_secret_key,
+                algorithms=[settings.jwt_algorithm],
+            )
+        except (jwt.ExpiredSignatureError, jwt.InvalidTokenError) as exc:
+            # Undecodable token → 401; we cannot look up the jti without a valid payload
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid refresh token",
+                headers={"WWW-Authenticate": "Bearer"},
+            ) from exc
+
+        jti: str | None = payload.get("jti")
+        if not jti:
+            return  # No jti to revoke — treat as no-op
+
+        token_record = await self._repo.get_refresh_token_by_jti(jti)
+        if token_record is not None and not token_record.revoked:
+            await self._repo.revoke_refresh_token(token_record)
