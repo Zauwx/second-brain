@@ -95,8 +95,15 @@ async def get_current_user(
     if user_id_str is None:
         raise credentials_exception
 
+    # A validly-signed token whose sub is non-numeric (email, UUID, "null") must
+    # map to 401 — not crash with an unhandled ValueError (500) (CR-02).
+    try:
+        user_id = int(user_id_str)
+    except (TypeError, ValueError) as exc:
+        raise credentials_exception from exc
+
     # DB lookup: stale tokens (user deleted, T-03-12) return 401 here
-    user = await AuthRepository(db).get_user_by_id(int(user_id_str))
+    user = await AuthRepository(db).get_user_by_id(user_id)
     if user is None:
         raise credentials_exception
 
