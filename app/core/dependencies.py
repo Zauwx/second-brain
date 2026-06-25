@@ -6,21 +6,39 @@ dependency overrides in tests cleaner (one place to patch).
 
 Usage:
     from fastapi import Depends
-    from app.core.dependencies import get_db, get_note_service
+    from app.core.dependencies import get_db, get_note_service, get_current_user
 
     @router.get("/notes")
     async def list_notes(svc: NoteService = Depends(get_note_service)):
+        ...
+
+    @router.get("/protected")
+    async def protected_route(user: User = Depends(get_current_user)):
         ...
 """
 
 from collections.abc import AsyncGenerator
 
-from fastapi import Depends
+import jwt
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from jwt.exceptions import ExpiredSignatureError, InvalidTokenError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.auth.models import User
+from app.auth.repository import AuthRepository
+from app.core.config import settings
 from app.database import AsyncSessionLocal
 from app.notes.repository import NoteRepository
 from app.notes.service import NoteService
+
+# ---------------------------------------------------------------------------
+# Bearer scheme: auto_error=False is REQUIRED
+# With auto_error=True FastAPI raises 403 (not 401) for missing headers.
+# We handle None explicitly in get_current_user to guarantee 401 (Pitfall 3,
+# RESEARCH.md Pattern 2, T-03-08).
+# ---------------------------------------------------------------------------
+bearer_scheme = HTTPBearer(auto_error=False)
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
@@ -34,3 +52,52 @@ async def get_note_service(
 ) -> NoteService:
     """Construct NoteService with its repository for the current request."""
     return NoteService(NoteRepository(db))
+
+
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+    db: AsyncSession = Depends(get_db),
+) -> User:
+    """Validate the Bearer access token and return the authenticated User.
+
+    Security properties (RESEARCH.md Pattern 2, T-03-08, T-03-09, T-03-12):
+      - auto_error=False → missing/malformed Authorization header → 401 (not 403)
+      - jwt.decode enforces exp (T-03-09) → ExpiredSignatureError → 401
+      - sub only (T-03-13) — no mutable email/role claims in payload (Pitfall 4)
+      - DB lookup by sub at every request (T-03-12) → stale token after user deletion → 401
+
+    Raises:
+        HTTPException 401: For any of: missing credentials, invalid signature,
+            expired token, missing sub claim, or user not found in DB.
+    """
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+    # Guard: missing or empty Authorization header (Pitfall 3 — auto_error=False gives us None)
+    if credentials is None:
+        raise credentials_exception
+
+    try:
+        payload = jwt.decode(
+            credentials.credentials,
+            settings.jwt_secret_key,
+            algorithms=[settings.jwt_algorithm],
+        )
+    except (ExpiredSignatureError, InvalidTokenError) as exc:
+        # Covers: expired tokens, bad signature, malformed JWT, wrong algorithm
+        raise credentials_exception from exc
+
+    # Extract sub — RESEARCH.md Pattern 2; only sub+exp are in access token (D-01/T-03-13)
+    user_id_str: str | None = payload.get("sub")
+    if user_id_str is None:
+        raise credentials_exception
+
+    # DB lookup: stale tokens (user deleted, T-03-12) return 401 here
+    user = await AuthRepository(db).get_user_by_id(int(user_id_str))
+    if user is None:
+        raise credentials_exception
+
+    return user
