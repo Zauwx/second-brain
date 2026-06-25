@@ -1,8 +1,8 @@
 ---
 phase: 03
 slug: auth-per-user-data-isolation
-status: draft
-nyquist_compliant: false
+status: approved
+nyquist_compliant: true
 wave_0_complete: false
 created: 2026-06-25
 ---
@@ -17,20 +17,22 @@ created: 2026-06-25
 
 | Property | Value |
 |----------|-------|
-| **Framework** | {pytest 7.x / jest 29.x / vitest / go test / other} |
-| **Config file** | {path or "none — Wave 0 installs"} |
-| **Quick run command** | `{quick command}` |
-| **Full suite command** | `{full command}` |
-| **Estimated runtime** | ~{N} seconds |
+| **Framework** | pytest 9.x + pytest-asyncio 0.24.x (`asyncio_mode = "auto"`) |
+| **Config file** | `pyproject.toml` `[tool.pytest.ini_options]` (already configured) |
+| **Quick run command** | `uv run pytest tests/test_auth.py -x` |
+| **Full suite command** | `uv run pytest tests/ -x` |
+| **Estimated runtime** | ~30s quick / ~60-90s full (testcontainers MySQL spin-up dominates) |
+
+*Requires Docker Desktop running for testcontainers mysql:8.4.*
 
 ---
 
 ## Sampling Rate
 
-- **After every task commit:** Run `{quick run command}`
-- **After every plan wave:** Run `{full suite command}`
+- **After every task commit:** Run `uv run pytest tests/test_auth.py -x`
+- **After every plan wave:** Run `uv run pytest tests/ -x`
 - **Before `/gsd:verify-work`:** Full suite must be green
-- **Max feedback latency:** {N} seconds
+- **Max feedback latency:** ~90 seconds
 
 ---
 
@@ -38,7 +40,15 @@ created: 2026-06-25
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| {N}-01-01 | 01 | 1 | REQ-{XX} | T-{N}-01 / — | {expected secure behavior or "N/A"} | unit | `{command}` | ✅ / ❌ W0 | ⬜ pending |
+| 03-01-01 | 01 | 1 | AUTH-01/02 | T-03-06 / T-03-SC | Block install of unverified auth packages until human-verified | checkpoint | n/a (blocking-human gate) | n/a | ⬜ pending |
+| 03-01-02 | 01 | 1 | AUTH-01/02 | T-03-04 | JWT settings load from .env; secret never hard-coded | integration | `uv run python -c "from app.core.config import settings; import jwt, pwdlib"` | ❌ W0 | ⬜ pending |
+| 03-01-03 | 01 | 1 | AUTH-01 | T-03-01/03 | register 201; dup 409; bad email/weak pw 422; hash never returned | integration | `uv run pytest tests/test_auth.py -x -k register` | ❌ W0 | ⬜ pending |
+| 03-01-03 | 01 | 1 | AUTH-02 | T-03-02/05 | login 200 token pair; wrong pw/unknown email 401; access token signed | integration | `uv run pytest tests/test_auth.py -x -k login` | ❌ W0 | ⬜ pending |
+| 03-02-01 | 02 | 2 | AUTH-03 | T-03-08/09/12/13 | get_current_user 401 on missing/expired/invalid/deleted-user | integration | `uv run pytest tests/test_auth.py -x -k "token or current_user"` | ❌ W0 | ⬜ pending |
+| 03-02-02 | 02 | 2 | AUTH-03 | T-03-10/11/14 | refresh rotates + revokes old jti; logout 204; refresh-after-logout 401; siblings independent | integration | `uv run pytest tests/test_auth.py -x -k "refresh or logout"` | ❌ W0 | ⬜ pending |
+| 03-03-01 | 03 | 3 | AUTH-04 | T-03-17/20 | notes.user_id NOT NULL FK; NoteCreate omits user_id | integration | `uv run python -c "from app.notes.models import Note; from app.notes.schemas import NoteCreate, NoteRead"` + migration via conftest | ❌ W0 | ⬜ pending |
+| 03-03-02 | 03 | 3 | AUTH-04 | T-03-15/16/19 | repo scopes create+list to user_id; service 403/404 ownership | unit | `uv run mypy app/notes/repository.py app/notes/service.py` (behavior via 03-03-03) | ❌ W0 | ⬜ pending |
+| 03-03-03 | 03 | 3 | AUTH-04 | T-03-15/16/17/18/19 | no-token 401; cross-user 403; missing 404; list isolation; owner assigned server-side | integration | `uv run pytest tests/test_notes_isolation.py -x` then `uv run pytest tests/ -x` | ❌ W0 | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -46,11 +56,12 @@ created: 2026-06-25
 
 ## Wave 0 Requirements
 
-- [ ] `{tests/test_file.py}` — stubs for REQ-{XX}
-- [ ] `{tests/conftest.py}` — shared fixtures
-- [ ] `{framework install}` — if no framework detected
+- [ ] `tests/test_auth.py` — register/login (Plan 01 Task 3), refresh/logout/401 (Plan 02) — covers AUTH-01, AUTH-02, AUTH-03
+- [ ] `tests/test_notes_isolation.py` — cross-user 403/404, list isolation, owner assignment, no-token 401 (Plan 03 Task 3) — covers AUTH-04
+- [ ] `tests/conftest.py` additions — `registered_user`, `auth_client` (Plan 01); `user_a_client`, `user_b_client` (Plan 03)
+- [ ] Existing `tests/test_notes_crud.py` + `tests/test_notes_list.py` — swap `client` → `auth_client` fixture (Plan 03 Task 3, Pitfall 5)
 
-*If none: "Existing infrastructure covers all phase requirements."*
+*Framework already installed (pytest + pytest-asyncio + testcontainers). No framework install needed — only new test files + fixtures.*
 
 ---
 
@@ -58,19 +69,20 @@ created: 2026-06-25
 
 | Behavior | Requirement | Why Manual | Test Instructions |
 |----------|-------------|------------|-------------------|
-| {behavior} | REQ-{XX} | {reason} | {steps} |
+| Package legitimacy of pyjwt / pwdlib / email-validator | AUTH-01/02 | slopcheck unavailable; [ASSUMED-OK] packages require human PyPI verification before install (package legitimacy gate) | Plan 01 Task 1 blocking-human checkpoint — confirm the three PyPI pages match expected repos/authors |
+| Full lifecycle via Swagger (register → login → Authorize → /notes → refresh → logout → refresh fails 401) | AUTH-01..04 | End-to-end UX confidence beyond automated tests | Optional: run `docker compose up`, exercise the flow in /docs (all assertions are also covered by automated tests) |
 
-*If none: "All phase behaviors have automated verification."*
+*All phase behaviors have automated verification; the Swagger walkthrough is an optional confidence check, not a gate.*
 
 ---
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < {N}s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies (Task 03-01-01 is the legitimacy checkpoint by design)
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references (test_auth.py, test_notes_isolation.py, conftest fixtures)
+- [x] No watch-mode flags
+- [x] Feedback latency < 90s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** {pending / approved YYYY-MM-DD}
+**Approval:** approved 2026-06-25

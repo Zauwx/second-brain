@@ -62,7 +62,10 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. User can call `POST /auth/refresh` with a valid refresh token to receive a new access token without re-entering credentials — old refresh token is invalidated on rotation
   4. Calling `GET /notes` or `GET /notes/{id}` with a valid JWT for user A never returns notes belonging to user B — verified by an integration test that asserts 403/404 on cross-user access
   5. Calling any protected endpoint with no token or an expired token returns 401
-**Plans**: TBD
+**Plans**: 3 plans
+- [ ] 03-01-PLAN.md - Auth foundation: app/auth/ package, users+refresh_tokens migration, POST /auth/register + /auth/login
+- [ ] 03-02-PLAN.md - Token lifecycle: get_current_user dependency, POST /auth/refresh (rotation) + /auth/logout, 401 handling
+- [ ] 03-03-PLAN.md - Per-user isolation: notes.user_id FK, protect+scope notes endpoints (403/404), cross-user isolation tests
 
 ### Phase 4: Tags, Collections, Full-Text Search
 **Goal**: Users can organize notes with tags (many-to-many) and collections, and search notes by keyword using MySQL FULLTEXT — completing the full table-stakes REST surface
@@ -126,7 +129,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 |-------|----------------|--------|-----------|
 | 1. Repo Foundation | 3/3 | Complete   | 2026-06-24 |
 | 2. Database + API Skeleton | 3/3 | Complete   | 2026-06-24 |
-| 3. Auth + Per-User Data Isolation | 0/TBD | Not started | - |
+| 3. Auth + Per-User Data Isolation | 0/3 | Planned | - |
 | 4. Tags, Collections, Full-Text Search | 0/TBD | Not started | - |
 | 5. Local AI (Ollama) | 0/TBD | Not started | - |
 | 6. RAG Pipeline | 0/TBD | Not started | - |
