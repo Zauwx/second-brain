@@ -103,4 +103,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-24 — Phase 1 (Repo Foundation) complete: public repo, hygiene layer, Dockerized FastAPI skeleton verified.*
+*Last updated: 2026-06-25 — Phase 3 (Auth + Per-User Data Isolation) complete: JWT register/login, refresh-token rotation + logout, and per-user note isolation (403/404 on cross-user access) verified against real MySQL (66 tests passing).*
