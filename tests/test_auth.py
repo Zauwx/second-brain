@@ -232,8 +232,8 @@ async def test_expired_token_returns_401(session: AsyncSession) -> None:
 
 async def test_valid_token_returns_user(client: httpx.AsyncClient, session: AsyncSession) -> None:
     """get_current_user with a valid access token must return the matching User."""
-    from app.core.dependencies import get_current_user  # noqa: PLC0415
     from app.auth.service import create_access_token  # noqa: PLC0415
+    from app.core.dependencies import get_current_user  # noqa: PLC0415
 
     # Register a user to get a real user_id
     reg = await client.post(
@@ -256,8 +256,8 @@ async def test_valid_token_returns_user(client: httpx.AsyncClient, session: Asyn
 
 async def test_token_for_deleted_user_returns_401(session: AsyncSession) -> None:
     """get_current_user with sub pointing to a non-existent user must raise HTTPException 401."""
-    from app.core.dependencies import get_current_user  # noqa: PLC0415
     from app.auth.service import create_access_token  # noqa: PLC0415
+    from app.core.dependencies import get_current_user  # noqa: PLC0415
 
     # Use a user_id that does not exist
     token = create_access_token(
