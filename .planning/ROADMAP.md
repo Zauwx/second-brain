@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Repo Foundation** - Git hygiene, project scaffold, and Docker base that cannot be safely added after the first commit (completed 2026-06-24)
 - [x] **Phase 2: Database + API Skeleton** - Async MySQL, Alembic migrations, Note CRUD, OpenAPI docs, pagination, and tests — all working in Docker (completed 2026-06-24)
-- [ ] **Phase 3: Auth + Per-User Data Isolation** - JWT auth with refresh tokens, per-user query isolation, and cross-user access tests in CI
+- [x] **Phase 3: Auth + Per-User Data Isolation** - JWT auth with refresh tokens, per-user query isolation, and cross-user access tests in CI (completed 2026-06-25)
 - [ ] **Phase 4: Tags, Collections, Full-Text Search** - Many-to-many tags, collections, MySQL FULLTEXT search, and REST surface polish
 - [ ] **Phase 5: Local AI (Ollama)** - Ollama service in Docker, LLM provider abstraction, auto-summarization, and auto-tagging via local LLM
 - [ ] **Phase 6: RAG Pipeline** - Embedding pipeline, note_chunks store, cosine similarity search, natural-language Q&A, and related-notes via cloud LLM
@@ -65,7 +65,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 3 plans
 - [x] 03-01-PLAN.md - Auth foundation: app/auth/ package, users+refresh_tokens migration, POST /auth/register + /auth/login
 - [x] 03-02-PLAN.md - Token lifecycle: get_current_user dependency, POST /auth/refresh (rotation) + /auth/logout, 401 handling
-- [ ] 03-03-PLAN.md - Per-user isolation: notes.user_id FK, protect+scope notes endpoints (403/404), cross-user isolation tests
+- [x] 03-03-PLAN.md - Per-user isolation: notes.user_id FK, protect+scope notes endpoints (403/404), cross-user isolation tests
 
 ### Phase 4: Tags, Collections, Full-Text Search
 **Goal**: Users can organize notes with tags (many-to-many) and collections, and search notes by keyword using MySQL FULLTEXT — completing the full table-stakes REST surface
@@ -129,7 +129,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 |-------|----------------|--------|-----------|
 | 1. Repo Foundation | 3/3 | Complete   | 2026-06-24 |
 | 2. Database + API Skeleton | 3/3 | Complete   | 2026-06-24 |
-| 3. Auth + Per-User Data Isolation | 2/3 | In Progress|  |
+| 3. Auth + Per-User Data Isolation | 3/3 | Complete   | 2026-06-25 |
 | 4. Tags, Collections, Full-Text Search | 0/TBD | Not started | - |
 | 5. Local AI (Ollama) | 0/TBD | Not started | - |
 | 6. RAG Pipeline | 0/TBD | Not started | - |
