@@ -9,6 +9,8 @@ Design principles:
 - Filter: optional case-insensitive substring match on `content` via LIKE (D-08, T-02-12).
 """
 
+from datetime import datetime
+
 from sqlalchemy import asc, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import InstrumentedAttribute
@@ -18,7 +20,7 @@ from app.notes.schemas import NoteCreate, NoteUpdate
 
 # Whitelisted sort fields — maps token to ORM column object (D-07, T-02-11).
 # Only these tokens are accepted; anything else raises ValueError → 422.
-_SORT_WHITELIST: dict[str, InstrumentedAttribute] = {  # type: ignore[type-arg]
+_SORT_WHITELIST: dict[str, InstrumentedAttribute[datetime]] = {
     "created_at": Note.created_at,
     "updated_at": Note.updated_at,
 }

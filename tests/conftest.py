@@ -25,6 +25,7 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from testcontainers.mysql import MySqlContainer
 
+import httpx
 from app.core.dependencies import get_db
 from app.main import app
 
@@ -108,3 +109,32 @@ async def client(session: AsyncSession) -> AsyncClient:
         yield ac
 
     app.dependency_overrides.clear()
+
+
+# ---------------------------------------------------------------------------
+# Auth fixtures — function-scoped; reuse the client fixture (Phase 3)
+# ---------------------------------------------------------------------------
+
+
+@pytest_asyncio.fixture
+async def registered_user(client: httpx.AsyncClient) -> dict:
+    """Create a test user via POST /auth/register and return the response body."""
+    resp = await client.post(
+        "/auth/register",
+        json={"email": "test@example.com", "password": "Test1234!"},
+    )
+    assert resp.status_code == 201, f"Register failed: {resp.json()}"
+    return resp.json()
+
+
+@pytest_asyncio.fixture
+async def auth_client(client: httpx.AsyncClient, registered_user: dict) -> httpx.AsyncClient:
+    """AsyncClient pre-authenticated with the registered user's access token."""
+    resp = await client.post(
+        "/auth/login",
+        json={"email": "test@example.com", "password": "Test1234!"},
+    )
+    assert resp.status_code == 200, f"Login failed: {resp.json()}"
+    token = resp.json()["access_token"]
+    client.headers["Authorization"] = f"Bearer {token}"
+    return client

@@ -37,6 +37,10 @@ if config.config_file_name is not None:
 # so its mapper is registered with Base.metadata before Alembic compares.
 # ---------------------------------------------------------------------------
 
+from app.auth.models import (  # noqa: E402
+    RefreshToken,  # noqa: F401  # registers RefreshToken with Base.metadata (Pitfall 6)
+    User,  # noqa: F401  # registers User with Base.metadata (Pitfall 6)
+)
 from app.database import Base  # noqa: E402
 from app.notes.models import Note  # noqa: E402, F401  # registers Note with Base.metadata
 

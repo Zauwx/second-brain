@@ -16,12 +16,11 @@ Coverage:
     - Access token decodes with correct sub=user_id; contains exp
 """
 
-import jwt
 import httpx
+import jwt
 import pytest
 
 from app.core.config import settings
-
 
 # ---------------------------------------------------------------------------
 # Register tests (AUTH-01)

@@ -13,7 +13,7 @@ from fastapi import HTTPException, status
 
 from app.notes.models import Note
 from app.notes.repository import NoteRepository
-from app.notes.schemas import NoteCreate, NoteListResponse, NoteUpdate
+from app.notes.schemas import NoteCreate, NoteListResponse, NoteRead, NoteUpdate
 
 
 class NoteService:
@@ -68,7 +68,13 @@ class NoteService:
                 detail=str(exc),
             ) from exc
         pages = (total + size - 1) // size if total > 0 else 0
-        return NoteListResponse(items=items, total=total, page=page, size=size, pages=pages)
+        return NoteListResponse(
+            items=[NoteRead.model_validate(n) for n in items],
+            total=total,
+            page=page,
+            size=size,
+            pages=pages,
+        )
 
     async def update(self, note_id: int, data: NoteUpdate) -> Note:
         """Update the note with the given id, or raise HTTP 404.
