@@ -32,10 +32,21 @@ findings:
   warning: 7
   info: 5
   total: 14
-status: issues_found
+findings_remaining:
+  critical: 0
+  warning: 0
+  info: 5
+status: remediated
+remediated: 2026-06-25T00:00:00Z
 ---
 
 # Phase 3: Code Review Report
+
+> **Remediation (2026-06-25 via `/gsd:code-review 03 --fix`):** All 2 Critical and 7 Warning
+> findings were fixed and committed atomically (`3eec20f`, `199a471`, `a216d91`, `c163d6f`,
+> `3b7522d`, `e8ccec2`, `0f0467b`). Post-fix verification: 72 tests passing, ruff + mypy clean.
+> The 5 Info findings (IN-01..IN-05) remain open by design (excluded from the `--fix` scope; run
+> `/gsd:code-review 03 --fix --all` to include them).
 
 **Reviewed:** 2026-06-25
 **Depth:** standard
