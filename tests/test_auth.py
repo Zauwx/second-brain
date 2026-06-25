@@ -391,6 +391,29 @@ async def test_logout_returns_204(client: httpx.AsyncClient) -> None:
     assert resp.content == b""
 
 
+async def test_logout_expired_token_returns_204(client: httpx.AsyncClient) -> None:
+    """POST /auth/logout with an expired/undecodable token must be idempotent → 204 (WR-07)."""
+    expired_token = jwt.encode(
+        {
+            "sub": "1",
+            "jti": "expired-logout-jti",
+            "exp": datetime.now(UTC) - timedelta(days=1),
+        },
+        settings.jwt_secret_key,
+        algorithm=settings.jwt_algorithm,
+    )
+    resp = await client.post("/auth/logout", json={"refresh_token": expired_token})
+    assert resp.status_code == 204
+    assert resp.content == b""
+
+
+async def test_logout_garbage_token_returns_204(client: httpx.AsyncClient) -> None:
+    """POST /auth/logout with a garbage token must be idempotent → 204 (WR-07)."""
+    resp = await client.post("/auth/logout", json={"refresh_token": "garbage.token"})
+    assert resp.status_code == 204
+    assert resp.content == b""
+
+
 async def test_logout_then_refresh_returns_401(client: httpx.AsyncClient) -> None:
     """After logout, POST /auth/refresh with that token must return 401 (D-05)."""
     email, password = "logout2@example.com", "Test1234!"

@@ -107,9 +107,6 @@ async def refresh(
     "/logout",
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Revoke a refresh token",
-    responses={
-        401: {"description": "Invalid or undecodable refresh token"},
-    },
 )
 async def logout(
     body: LogoutRequest,
@@ -117,8 +114,9 @@ async def logout(
 ) -> None:
     """POST /auth/logout — mark the refresh token's jti as revoked.
 
-    Returns 204 No Content on success (D-05).
-    Subsequent /auth/refresh with this token returns 401 (T-03-11).
+    Always returns 204 No Content — logout is idempotent (D-05, WR-07): an
+    already-revoked, unknown, or undecodable/expired token is a no-op, not a
+    401. Subsequent /auth/refresh with this token returns 401 (T-03-11).
     No cascade revocation — only this jti is revoked (D-06).
     """
     await _make_service(session).logout(body.refresh_token)

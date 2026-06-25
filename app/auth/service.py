@@ -249,13 +249,16 @@ class AuthService:
 
         A subsequent /auth/refresh with the same token will return 401 (T-03-11).
         No cascade revocation — only this token's jti is revoked (D-06).
-        If the token is already revoked or not found, the call is a no-op (idempotent).
+
+        Logout is fully idempotent (WR-07): "I want this session gone" always
+        succeeds with 204. If the token is already revoked, not found, or even
+        undecodable/expired, the call is a no-op — an expired or garbage token
+        cannot be revoked (no parseable jti) but the session it represents is
+        already dead, so returning 204 is the consistent contract. This matches
+        the expired-token logout path tested by test_logout_expired_token.
 
         Args:
             refresh_token_str: The raw JWT string from the client body.
-
-        Raises:
-            HTTPException 401: If the JWT cannot be decoded (undecodable token).
         """
         try:
             payload = jwt.decode(
@@ -263,13 +266,10 @@ class AuthService:
                 settings.jwt_secret_key,
                 algorithms=[settings.jwt_algorithm],
             )
-        except (jwt.ExpiredSignatureError, jwt.InvalidTokenError) as exc:
-            # Undecodable token → 401; we cannot look up the jti without a valid payload
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid refresh token",
-                headers={"WWW-Authenticate": "Bearer"},
-            ) from exc
+        except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
+            # Undecodable/expired token → no jti to revoke, but the session is
+            # already dead. Idempotent no-op (204), not 401 (WR-07).
+            return
 
         jti: str | None = payload.get("jti")
         if not jti:
