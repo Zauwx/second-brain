@@ -3,10 +3,8 @@
 Endpoints (all served under the /auth prefix registered in app/main.py):
   POST /auth/register  — create a new user account (returns 201 + UserRead)
   POST /auth/login     — verify credentials and return a JWT token pair (200)
-
-Endpoints scaffolded for Plan 02:
-  POST /auth/refresh   — rotate refresh token (Plan 02)
-  POST /auth/logout    — revoke refresh token (Plan 02)
+  POST /auth/refresh   — rotate refresh token; returns new token pair (200) [Plan 02]
+  POST /auth/logout    — revoke refresh token (204) [Plan 02]
 
 Status codes follow REST conventions:
   201 — Created (register)
@@ -21,7 +19,14 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.repository import AuthRepository
-from app.auth.schemas import LoginRequest, TokenResponse, UserCreate, UserRead
+from app.auth.schemas import (
+    LoginRequest,
+    LogoutRequest,
+    RefreshRequest,
+    TokenResponse,
+    UserCreate,
+    UserRead,
+)
 from app.auth.service import AuthService
 from app.core.dependencies import get_db
 
@@ -75,3 +80,45 @@ async def login(
     Returns 401 on invalid email or wrong password.
     """
     return await _make_service(session).login(data)
+
+
+@router.post(
+    "/refresh",
+    response_model=TokenResponse,
+    summary="Rotate a refresh token",
+    responses={
+        401: {"description": "Invalid, expired, or revoked refresh token"},
+    },
+)
+async def refresh(
+    body: RefreshRequest,
+    session: AsyncSession = Depends(get_db),
+) -> TokenResponse:
+    """POST /auth/refresh — verify the refresh token, revoke its jti, issue a new pair.
+
+    Rotation (D-04): old jti is revoked; new jti created in DB.
+    Concurrent tokens for the same user are unaffected (D-03).
+    Returns 401 if the token is invalid, expired, or already revoked (D-06).
+    """
+    return await _make_service(session).rotate_refresh_token(body.refresh_token)
+
+
+@router.post(
+    "/logout",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Revoke a refresh token",
+    responses={
+        401: {"description": "Invalid or undecodable refresh token"},
+    },
+)
+async def logout(
+    body: LogoutRequest,
+    session: AsyncSession = Depends(get_db),
+) -> None:
+    """POST /auth/logout — mark the refresh token's jti as revoked.
+
+    Returns 204 No Content on success (D-05).
+    Subsequent /auth/refresh with this token returns 401 (T-03-11).
+    No cascade revocation — only this jti is revoked (D-06).
+    """
+    await _make_service(session).logout(body.refresh_token)
