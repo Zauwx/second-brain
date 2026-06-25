@@ -10,7 +10,7 @@ Phase 3 additions (D-07..D-10):
 - create(data, user_id) — user_id is assigned server-side (D-10)
 - get_or_404_owned(note_id, current_user) — 404 if missing, 403 if wrong owner (D-08)
 - list_notes(..., user_id) — lists are scoped to the authenticated owner (D-09)
-- update/delete use get_or_404_owned instead of get_or_404
+- update/delete use get_or_404_owned (the only fetch accessor — no unscoped getter)
 """
 
 from __future__ import annotations
@@ -40,20 +40,6 @@ class NoteService:
         it is never accepted from the client request body.
         """
         return await self._repo.create(data, user_id)
-
-    async def get_or_404(self, note_id: int) -> Note:
-        """Return the note with the given id, or raise HTTP 404.
-
-        Does NOT check ownership — use get_or_404_owned for authenticated endpoints.
-        Kept for internal use only.
-        """
-        note = await self._repo.get_by_id(note_id)
-        if note is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Note not found",
-            )
-        return note
 
     async def get_or_404_owned(self, note_id: int, current_user: User) -> Note:
         """Return the note or raise 404 (missing) / 403 (wrong owner) (D-08).
