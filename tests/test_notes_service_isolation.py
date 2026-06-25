@@ -13,16 +13,13 @@ Uses the same `session` fixture (testcontainers MySQL + transaction rollback) as
 All tests create real User and Note rows to exercise the real MySQL stack.
 """
 
-import httpx
 import pytest
 from fastapi import HTTPException
 
 from app.auth.models import User
-from app.notes.models import Note
 from app.notes.repository import NoteRepository
-from app.notes.schemas import NoteCreate, NoteUpdate
+from app.notes.schemas import NoteCreate
 from app.notes.service import NoteService
-
 
 # ---------------------------------------------------------------------------
 # Helpers — create a bare User row directly in the DB (no HTTP round-trip)
