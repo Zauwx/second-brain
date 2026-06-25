@@ -33,6 +33,12 @@ from app.core.config import settings
 
 password_hash = PasswordHash.recommended()
 
+# Fixed dummy Argon2id hash used to equalise login timing when the email is
+# unknown (WR-04). Verifying against this on the no-user path makes the
+# unknown-email and wrong-password branches both pay one full Argon2id verify,
+# closing the user-enumeration timing oracle.
+_DUMMY_PASSWORD_HASH = password_hash.hash("timing-equalizer-not-a-real-password")
+
 
 # ---------------------------------------------------------------------------
 # Stateless JWT helpers (RESEARCH Pattern 1)
@@ -103,15 +109,23 @@ class AuthService:
         Raises:
             HTTPException 401: On unknown email or wrong password.
         """
+        invalid_credentials = HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
         user = await self._repo.get_user_by_email(data.email)
-        # Constant-time path: always call verify even on None user to prevent timing attacks.
-        # If user is None we short-circuit after a dummy check.
-        if user is None or not password_hash.verify(data.password, user.hashed_password):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid credentials",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
+        # Timing-equalised path (WR-04): both the unknown-email and the
+        # wrong-password branches perform exactly one Argon2id verify, so an
+        # attacker cannot distinguish them by response latency (no user
+        # enumeration oracle). `or` would short-circuit and skip the verify on
+        # the None-user path, so the unknown-email check is handled explicitly.
+        if user is None:
+            password_hash.verify(data.password, _DUMMY_PASSWORD_HASH)
+            raise invalid_credentials
+        if not password_hash.verify(data.password, user.hashed_password):
+            raise invalid_credentials
 
         access_token = create_access_token(
             user.id,
