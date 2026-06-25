@@ -35,13 +35,15 @@ def upgrade() -> None:
     # This MUST precede the NOT NULL column addition (Pitfall 1).
     op.execute("TRUNCATE TABLE notes")
 
-    # Step 1: Add nullable column first — required for an existing (now empty) table.
+    # Step 1: Add column as NOT NULL directly — safe because table is empty after TRUNCATE.
+    # Using nullable=False here avoids a second ALTER TABLE that MySQL rejects when a FK
+    # constraint already exists on the column (MySQL ER_FK_COLUMN_CANNOT_CHANGE_CHILD).
     op.add_column(
         "notes",
         sa.Column(
             "user_id",
             mysql.INTEGER(unsigned=True),
-            nullable=True,
+            nullable=False,
             comment="Owner user — Phase 3 auth seam",
         ),
     )
@@ -57,15 +59,7 @@ def upgrade() -> None:
         ondelete="CASCADE",
     )
 
-    # Step 3: Make NOT NULL — safe because table is empty after TRUNCATE.
-    op.alter_column(
-        "notes",
-        "user_id",
-        existing_type=mysql.INTEGER(unsigned=True),
-        nullable=False,
-    )
-
-    # Step 4: Add index for query performance (per-user list queries).
+    # Step 3: Add index for query performance (per-user list queries).
     op.create_index("ix_notes_user_id", "notes", ["user_id"])
 
 
