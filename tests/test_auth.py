@@ -254,6 +254,39 @@ async def test_valid_token_returns_user(client: httpx.AsyncClient, session: Asyn
     assert user.email == "gcuvalid@example.com"
 
 
+async def test_non_numeric_sub_returns_401(session: AsyncSession) -> None:
+    """A validly-signed token with a non-numeric sub must raise 401, not 500 (CR-02)."""
+    from app.core.dependencies import get_current_user  # noqa: PLC0415
+
+    bad_sub_token = jwt.encode(
+        {
+            "sub": "not-an-integer",
+            "exp": datetime.now(UTC) + timedelta(minutes=5),
+        },
+        settings.jwt_secret_key,
+        algorithm=settings.jwt_algorithm,
+    )
+    creds = HTTPAuthorizationCredentials(scheme="Bearer", credentials=bad_sub_token)
+    with pytest.raises(HTTPException) as exc_info:
+        await get_current_user(credentials=creds, db=session)
+    assert exc_info.value.status_code == 401
+
+
+async def test_refresh_non_numeric_sub_returns_401(client: httpx.AsyncClient) -> None:
+    """POST /auth/refresh with a non-numeric sub must return 401, not 500 (CR-02)."""
+    bad_sub_token = jwt.encode(
+        {
+            "sub": "not-an-integer",
+            "jti": "some-jti",
+            "exp": datetime.now(UTC) + timedelta(days=1),
+        },
+        settings.jwt_secret_key,
+        algorithm=settings.jwt_algorithm,
+    )
+    resp = await client.post("/auth/refresh", json={"refresh_token": bad_sub_token})
+    assert resp.status_code == 401
+
+
 async def test_token_for_deleted_user_returns_401(session: AsyncSession) -> None:
     """get_current_user with sub pointing to a non-existent user must raise HTTPException 401."""
     from app.auth.service import create_access_token  # noqa: PLC0415

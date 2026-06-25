@@ -186,19 +186,43 @@ class AuthService:
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-        # DB check — jti must exist and not be revoked (D-06: replay of revoked jti → 401)
+        invalid_token = HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Refresh token revoked or not found",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+        # A validly-signed token whose sub is non-numeric must map to 401, not a
+        # 500 from an unhandled ValueError (CR-02).
+        try:
+            user_id = int(user_id_str)
+        except (TypeError, ValueError) as exc:
+            raise invalid_token from exc
+
+        # DB check — jti must exist, not be revoked, and not be expired
+        # (D-06: replay of revoked jti → 401; WR-02: enforce stored expiry as
+        # defence-in-depth even if the JWT exp was somehow accepted).
         token_record = await self._repo.get_refresh_token_by_jti(jti)
-        if token_record is None or token_record.revoked:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Refresh token revoked or not found",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
+        now = datetime.now(UTC).replace(tzinfo=None)  # MySQL DATETIME has no tz
+        if (
+            token_record is None
+            or token_record.revoked
+            or token_record.expires_at <= now
+        ):
+            raise invalid_token
 
-        # Rotation: revoke old jti, issue new pair (D-04)
-        await self._repo.revoke_refresh_token(token_record)
+        # Atomic, race-safe rotation (WR-01, WR-05):
+        #   1. Conditional revoke: UPDATE ... WHERE jti=:jti AND revoked=0.
+        #      rowcount==0 means a concurrent refresh already revoked this jti
+        #      (replay race) → 401, no new chain issued.
+        #   2. Stage the new token in the SAME transaction (no intermediate
+        #      commit), then commit once so revoke+insert land atomically. A
+        #      crash before commit rolls back both — the old token survives and
+        #      the user is not silently logged out.
+        revoked_rows = await self._repo.revoke_refresh_token_if_active(jti)
+        if revoked_rows == 0:
+            raise invalid_token
 
-        user_id = int(user_id_str)
         new_access = create_access_token(
             user_id,
             settings.jwt_secret_key,
@@ -212,7 +236,8 @@ class AuthService:
         new_expires_at = datetime.now(UTC) + timedelta(
             days=settings.refresh_token_expire_days
         )
-        await self._repo.create_refresh_token(user_id, new_jti, new_expires_at)
+        self._repo.add_refresh_token(user_id, new_jti, new_expires_at)
+        await self._repo.commit()
 
         return TokenResponse(
             access_token=new_access,
