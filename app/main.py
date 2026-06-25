@@ -21,6 +21,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.api.health import router as health_router
+from app.auth.router import router as auth_router
 from app.database import engine
 from app.notes.router import router as notes_router
 
@@ -51,4 +52,5 @@ app = FastAPI(
 )
 
 app.include_router(health_router)
+app.include_router(auth_router, prefix="/auth")
 app.include_router(notes_router, prefix="/notes")
