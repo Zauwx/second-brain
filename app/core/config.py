@@ -1,4 +1,9 @@
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Publicly-known placeholder secret shipped in .env.example. The app must refuse
+# to boot with this (or any short) secret outside development (CR-01).
+_INSECURE_DEFAULT_JWT_SECRET = "changeme-jwt-secret-key-minimum-32-bytes-long"
 
 
 class Settings(BaseSettings):
@@ -26,6 +31,27 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 15
     refresh_token_expire_days: int = 7
+
+    @model_validator(mode="after")
+    def _require_secret_outside_dev(self) -> "Settings":
+        """Fail closed if the JWT secret is weak/default outside development (CR-01).
+
+        In development the safe-looking placeholder default is allowed so the
+        existing test suite (which runs with environment="development") still
+        works. In any other environment the app refuses to boot unless
+        JWT_SECRET_KEY is overridden with a 32+ byte random secret — otherwise
+        tokens would be signed with a publicly-known secret and anyone could
+        forge them for any user.
+        """
+        if self.environment != "development" and (
+            self.jwt_secret_key == _INSECURE_DEFAULT_JWT_SECRET
+            or len(self.jwt_secret_key) < 32
+        ):
+            raise ValueError(
+                "JWT_SECRET_KEY must be overridden with a 32+ byte random secret "
+                "in non-development environments"
+            )
+        return self
 
 
 settings = Settings()
