@@ -1,10 +1,11 @@
 ---
 phase: 4
 slug: tags-collections-full-text-search
-status: draft
-nyquist_compliant: false
+status: approved
+nyquist_compliant: true
 wave_0_complete: false
 created: 2026-06-28
+approved: 2026-06-28
 ---
 
 # Phase 4 — Validation Strategy
@@ -74,11 +75,11 @@ created: 2026-06-28
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 120s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies (plan-checker Dim 8a PASS)
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify (Dim 8c PASS)
+- [x] Wave 0 covers all MISSING references (Wave 0 embedded as Task 1 of each plan — Dim 8d PASS)
+- [x] No watch-mode flags (Dim 8b — testcontainers spin-up >30s is inherent to the stack, not a watch-mode violation)
+- [x] Feedback latency < 120s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** approved 2026-06-28 (gsd-plan-checker: 0 blockers)

@@ -871,14 +871,16 @@ app.include_router(search_router, prefix="/search")
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **`__table_args__` circular import risk: `note_tags` / `note_collections` Tables defined in `app/notes/models.py`**
+> Both resolved during planning (2026-06-28). Plans use string FK refs (`ForeignKey("tags.id")`) which defer resolution to mapper-configure time, and `GET /tags` is implemented in Plan 04-01. Recommendations below are acted on by the plans.
+
+1. **RESOLVED — `__table_args__` circular import risk: `note_tags` / `note_collections` Tables defined in `app/notes/models.py`**
    - What we know: The Table() objects reference `notes.id` (same file) and `tags.id` / `collections.id` (other files). SQLAlchemy resolves FK strings lazily (`ForeignKey("tags.id")`), so circular import at module load time is avoided as long as all models are imported before Alembic autogenerate runs.
    - What's unclear: Whether the import order in `alembic/env.py` (currently imports `Base` from `app.database`) will auto-discover all new models if they're only imported transitively.
    - Recommendation: In `alembic/env.py`, explicitly import all model modules (or import from a central `app.models` re-export) to ensure Alembic sees all tables. The existing migrations use `op.create_table()` (not autogenerate), so this is informational.
 
-2. **`GET /tags` endpoint — list all user's tags (for frontend autocomplete)**
+2. **RESOLVED — `GET /tags` endpoint — list all user's tags (for frontend autocomplete)**
    - What we know: D-02 says "GET /tags returns only the caller's tags". ORG-01 says attach/detach.
    - What's unclear: Is `GET /tags` explicitly in scope for ORG-01, or only `POST /notes/{id}/tags` + `DELETE`?
    - Recommendation: Include `GET /tags` — it's the only way to browse existing tags and is needed for the end-to-end Swagger flow in the success criteria.
