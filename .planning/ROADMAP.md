@@ -80,7 +80,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   5. All tag and collection resources are isolated per user — user A cannot read or modify user B's tags or collections
 **Plans**: 5 plans
 - [x] 04-01-PLAN.md — Tags slice: model, migration 0004 (+FULLTEXT rebuild), Note.tags + selectinload, attach/detach, GET /tags (ORG-01)
-- [ ] 04-02-PLAN.md — Tag filtering on GET /notes: AND-intersection multi-tag filter, normalized, no N+1 (ORG-02)
+- [x] 04-02-PLAN.md — Tag filtering on GET /notes: AND-intersection multi-tag filter, normalized, no N+1 (ORG-02)
 - [ ] 04-03-PLAN.md — Collections slice: model, migration 0005, create/list, add/remove notes, GET /collections/{id}/notes (ORG-03, ORG-04)
 - [ ] 04-04-PLAN.md — Full-text search: GET /search BOOLEAN MODE, 2-char tokens, sanitization, docker-compose min_token_size (SRCH-01)
 - [ ] 04-05-PLAN.md — Consolidated cross-user isolation suite for tags/collections/search (success criterion 5)
@@ -135,7 +135,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 1. Repo Foundation | 3/3 | Complete   | 2026-06-24 |
 | 2. Database + API Skeleton | 3/3 | Complete   | 2026-06-24 |
 | 3. Auth + Per-User Data Isolation | 3/3 | Complete   | 2026-06-25 |
-| 4. Tags, Collections, Full-Text Search | 1/5 | In Progress|  |
+| 4. Tags, Collections, Full-Text Search | 2/5 | In Progress|  |
 | 5. Local AI (Ollama) | 0/TBD | Not started | - |
 | 6. RAG Pipeline | 0/TBD | Not started | - |
 | 7. CI/CD Hardening + Portfolio Readiness | 0/TBD | Not started | - |
