@@ -41,6 +41,24 @@ if TYPE_CHECKING:
 # String FK refs ("tags.id") defer resolution to mapper-configure time — no
 # circular import at module load.
 # ---------------------------------------------------------------------------
+note_collections = Table(
+    "note_collections",
+    Base.metadata,
+    Column(
+        "note_id",
+        INTEGER(unsigned=True),
+        ForeignKey("notes.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    Column(
+        "collection_id",
+        INTEGER(unsigned=True),
+        ForeignKey("collections.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    mysql_engine="InnoDB",
+)
+
 note_tags = Table(
     "note_tags",
     Base.metadata,
@@ -98,6 +116,13 @@ class Note(Base):
     tags: Mapped[list[Tag]] = relationship(
         "Tag", secondary=note_tags, lazy="select"
     )
+    # Many-to-many collections relationship — lazy="select".
+    # selectinload added per-query where needed.
+    # overlaps="notes" silences the SQLAlchemy "copies column" warning for the
+    # bidirectional relationship pair (Collection.notes ↔ Note.collections_rel).
+    collections_rel: Mapped[list[Collection]] = relationship(
+        "Collection", secondary=note_collections, lazy="select", overlaps="notes"
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
@@ -112,3 +137,12 @@ class Note(Base):
 
     def __repr__(self) -> str:
         return f"<Note id={self.id!r} title={self.title!r}>"
+
+
+# ---------------------------------------------------------------------------
+# Ensure Collection is registered in the SQLAlchemy mapper registry so that
+# Note.collections_rel can resolve "Collection" at mapper-configure time.
+# This import is safe: app.collections.models only imports Note under
+# TYPE_CHECKING at runtime — no circular dependency chain.
+# ---------------------------------------------------------------------------
+from app.collections.models import Collection as _Collection  # noqa: F401, E402
