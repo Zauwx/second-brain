@@ -91,11 +91,11 @@ class Note(Base):
         index=True,
         comment="Owner user — added Phase 3",
     )
-    owner: Mapped["User"] = relationship("User", back_populates="notes")
+    owner: Mapped[User] = relationship("User", back_populates="notes")
     # Many-to-many tags relationship — lazy="select" (NOT lazy="selectin").
     # selectinload(Note.tags) is added explicitly in each async query to avoid
     # N+1 and MissingGreenlet errors (Pattern 2, RESEARCH.md).
-    tags: Mapped[list["Tag"]] = relationship(
+    tags: Mapped[list[Tag]] = relationship(
         "Tag", secondary=note_tags, lazy="select"
     )
     created_at: Mapped[datetime] = mapped_column(
