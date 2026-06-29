@@ -36,8 +36,9 @@ from app.main import app
 
 @pytest.fixture(scope="session")
 def mysql_container():
-    """Spin up a real mysql:8.4 container once per test session (D-16)."""
-    with MySqlContainer("mysql:8.4") as container:
+    """Spin up mysql:8.4 with innodb_ft_min_token_size=2 for 2-char FULLTEXT tests (D-11)."""
+    container = MySqlContainer("mysql:8.4").with_command("--innodb-ft-min-token-size=2")
+    with container:
         yield container
 
 
