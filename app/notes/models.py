@@ -31,6 +31,7 @@ from app.database import Base
 
 if TYPE_CHECKING:
     from app.auth.models import User
+    from app.collections.models import Collection
     from app.tags.models import Tag
 
 
