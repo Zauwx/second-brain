@@ -23,7 +23,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, ForeignKey, String, Text, func
+from sqlalchemy import Column, DateTime, ForeignKey, String, Table, Text, func
 from sqlalchemy.dialects.mysql import INTEGER
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -31,6 +31,33 @@ from app.database import Base
 
 if TYPE_CHECKING:
     from app.auth.models import User
+    from app.tags.models import Tag
+
+
+# ---------------------------------------------------------------------------
+# Association table: note_tags (many-to-many: Note ↔ Tag)
+# Defined at module level as a Core Table object (not an ORM class) so it can
+# be used as the `secondary` argument in the relationship below.
+# String FK refs ("tags.id") defer resolution to mapper-configure time — no
+# circular import at module load.
+# ---------------------------------------------------------------------------
+note_tags = Table(
+    "note_tags",
+    Base.metadata,
+    Column(
+        "note_id",
+        INTEGER(unsigned=True),
+        ForeignKey("notes.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    Column(
+        "tag_id",
+        INTEGER(unsigned=True),
+        ForeignKey("tags.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    mysql_engine="InnoDB",
+)
 
 
 class Note(Base):
@@ -64,7 +91,13 @@ class Note(Base):
         index=True,
         comment="Owner user — added Phase 3",
     )
-    owner: Mapped[User] = relationship("User", back_populates="notes")
+    owner: Mapped["User"] = relationship("User", back_populates="notes")
+    # Many-to-many tags relationship — lazy="select" (NOT lazy="selectin").
+    # selectinload(Note.tags) is added explicitly in each async query to avoid
+    # N+1 and MissingGreenlet errors (Pattern 2, RESEARCH.md).
+    tags: Mapped[list["Tag"]] = relationship(
+        "Tag", secondary=note_tags, lazy="select"
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,

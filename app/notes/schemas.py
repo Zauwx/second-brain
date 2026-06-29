@@ -15,6 +15,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.tags.schemas import TagRead
+
 
 class NoteCreate(BaseModel):
     """Request body for creating a new note."""
@@ -74,6 +76,7 @@ class NoteRead(BaseModel):
     user_id: int
     created_at: datetime
     updated_at: datetime
+    tags: list[TagRead] = []
 
 
 class NoteListResponse(BaseModel):

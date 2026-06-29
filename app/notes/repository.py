@@ -14,7 +14,7 @@ from datetime import datetime
 
 from sqlalchemy import asc, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import InstrumentedAttribute
+from sqlalchemy.orm import InstrumentedAttribute, selectinload
 
 from app.notes.models import Note
 from app.notes.schemas import NoteCreate, NoteUpdate
@@ -57,7 +57,11 @@ class NoteRepository:
         Ownership check is NOT performed here — that is the service's responsibility (D-08).
         The repository always fetches by PK only; NoteService.get_or_404_owned checks owner.
         """
-        result = await self._session.execute(select(Note).where(Note.id == note_id))
+        result = await self._session.execute(
+            select(Note)
+            .where(Note.id == note_id)
+            .options(selectinload(Note.tags))
+        )
         return result.scalar_one_or_none()
 
     async def list_paginated(
@@ -108,6 +112,11 @@ class NoteRepository:
             # ilike() binds the user value as a parameter — the f-string only adds wildcards
             # around an already-escaped bound value, not raw SQL text.
             query = query.where(Note.content.ilike(f"%{filter}%"))
+
+        # --- Always eager-load tags (prevents MissingGreenlet in async, no N+1) ---
+        # selectinload issues one extra SELECT for all tags in the result set.
+        # Must be applied BEFORE count so both count + page queries see consistent options.
+        query = query.options(selectinload(Note.tags))
 
         # --- Accurate filtered total count (BEFORE offset/limit) ---
         # Count is computed over the owner-scoped (+ filtered) subquery so it reflects
