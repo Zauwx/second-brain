@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Repo Foundation** - Git hygiene, project scaffold, and Docker base that cannot be safely added after the first commit (completed 2026-06-24)
 - [x] **Phase 2: Database + API Skeleton** - Async MySQL, Alembic migrations, Note CRUD, OpenAPI docs, pagination, and tests — all working in Docker (completed 2026-06-24)
 - [x] **Phase 3: Auth + Per-User Data Isolation** - JWT auth with refresh tokens, per-user query isolation, and cross-user access tests in CI (completed 2026-06-25)
-- [ ] **Phase 4: Tags, Collections, Full-Text Search** - Many-to-many tags, collections, MySQL FULLTEXT search, and REST surface polish
+- [x] **Phase 4: Tags, Collections, Full-Text Search** - Many-to-many tags, collections, MySQL FULLTEXT search, and REST surface polish (completed 2026-06-29)
 - [ ] **Phase 5: Local AI (Ollama)** - Ollama service in Docker, LLM provider abstraction, auto-summarization, and auto-tagging via local LLM
 - [ ] **Phase 6: RAG Pipeline** - Embedding pipeline, note_chunks store, cosine similarity search, natural-language Q&A, and related-notes via cloud LLM
 - [ ] **Phase 7: CI/CD Hardening + Portfolio Readiness** - GitHub Actions lint/test/build/release pipeline, prod Compose, versioned images, secrets audit
@@ -83,7 +83,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] 04-02-PLAN.md — Tag filtering on GET /notes: AND-intersection multi-tag filter, normalized, no N+1 (ORG-02)
 - [x] 04-03-PLAN.md — Collections slice: model, migration 0005, create/list, add/remove notes, GET /collections/{id}/notes (ORG-03, ORG-04)
 - [x] 04-04-PLAN.md — Full-text search: GET /search BOOLEAN MODE, 2-char tokens, sanitization, docker-compose min_token_size (SRCH-01)
-- [ ] 04-05-PLAN.md — Consolidated cross-user isolation suite for tags/collections/search (success criterion 5)
+- [x] 04-05-PLAN.md — Consolidated cross-user isolation suite for tags/collections/search (success criterion 5)
 
 ### Phase 5: Local AI (Ollama)
 **Goal**: Ollama runs as a Docker service alongside the API; users can trigger automatic summarization and tag suggestion for any note via a local LLM — no cloud calls, no billing, provably private
@@ -135,7 +135,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 1. Repo Foundation | 3/3 | Complete   | 2026-06-24 |
 | 2. Database + API Skeleton | 3/3 | Complete   | 2026-06-24 |
 | 3. Auth + Per-User Data Isolation | 3/3 | Complete   | 2026-06-25 |
-| 4. Tags, Collections, Full-Text Search | 4/5 | In Progress|  |
+| 4. Tags, Collections, Full-Text Search | 5/5 | Complete   | 2026-06-29 |
 | 5. Local AI (Ollama) | 0/TBD | Not started | - |
 | 6. RAG Pipeline | 0/TBD | Not started | - |
 | 7. CI/CD Hardening + Portfolio Readiness | 0/TBD | Not started | - |
