@@ -14,22 +14,24 @@ asyncio_mode="auto" is set in pyproject.toml — no @pytest.mark.asyncio needed.
 
 import httpx
 
-
 # ---------------------------------------------------------------------------
 # Basic keyword search
 # ---------------------------------------------------------------------------
 
 
 async def test_basic_search_returns_matching_notes(
-    auth_client: httpx.AsyncClient,
+    ft_auth_client: httpx.AsyncClient,
 ) -> None:
-    """GET /search/?q=python returns notes containing 'python'."""
-    r = await auth_client.post(
+    """GET /search/?q=python returns notes containing 'python'.
+
+    Uses ft_auth_client (committed session) — InnoDB FULLTEXT only sees committed data.
+    """
+    r = await ft_auth_client.post(
         "/notes/", json={"content": "Learning python programming with FastAPI"}
     )
     assert r.status_code == 201
 
-    response = await auth_client.get("/search/", params={"q": "python"})
+    response = await ft_auth_client.get("/search/", params={"q": "python"})
     assert response.status_code == 200
     data = response.json()
     assert data["total"] >= 1
@@ -59,18 +61,19 @@ async def test_search_returns_canonical_envelope(
 # ---------------------------------------------------------------------------
 
 
-async def test_two_char_token_search(auth_client: httpx.AsyncClient) -> None:
+async def test_two_char_token_search(ft_auth_client: httpx.AsyncClient) -> None:
     """2-char token 'AI' is searchable when innodb_ft_min_token_size=2 (D-11).
 
-    This test proves the MySQL server (started with --innodb-ft-min-token-size=2
-    in the testcontainers fixture) indexes short tokens correctly.
+    Uses ft_auth_client (committed session) — InnoDB FULLTEXT only sees committed data.
+    This test proves the MySQL server was started with --innodb-ft-min-token-size=2
+    (set in the testcontainers fixture by Plan 01 and in docker-compose.yml by this plan).
     """
-    r = await auth_client.post(
+    r = await ft_auth_client.post(
         "/notes/", json={"content": "Exploring AI tools for productivity and automation"}
     )
     assert r.status_code == 201
 
-    response = await auth_client.get("/search/", params={"q": "AI"})
+    response = await ft_auth_client.get("/search/", params={"q": "AI"})
     assert response.status_code == 200
     data = response.json()
     assert data["total"] >= 1

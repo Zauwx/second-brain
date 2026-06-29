@@ -23,6 +23,7 @@ import httpx
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from testcontainers.mysql import MySqlContainer
 
@@ -174,6 +175,70 @@ async def user_a_client(session: AsyncSession) -> AsyncClient:
         yield ac
 
     app.dependency_overrides.clear()
+
+
+# ---------------------------------------------------------------------------
+# FULLTEXT-committed fixtures (function-scoped, real commits + explicit cleanup)
+#
+# MySQL InnoDB FULLTEXT indexes only see COMMITTED data. The standard `session`
+# fixture uses transaction rollback (no real commit), so FULLTEXT queries return
+# zero results even for freshly inserted rows. These fixtures use the engine
+# directly (no outer transaction) so each `session.commit()` in route handlers
+# is a real DB commit visible to FULLTEXT queries.
+#
+# Cleanup: after each test, DELETE FROM users cascades to notes/tags/collections
+# and all junction table rows — leaving the DB clean for the next test.
+# ---------------------------------------------------------------------------
+
+
+@pytest_asyncio.fixture
+async def ft_session(test_engine) -> AsyncSession:
+    """Per-test committed session for FULLTEXT search tests.
+
+    Creates a fresh session from the engine (not bound to an outer transaction),
+    so NoteRepository.create() commits real transactions that InnoDB's FULLTEXT
+    index can see.  Deletes all user-owned data on teardown via CASCADE.
+    """
+    session_factory = async_sessionmaker(test_engine, expire_on_commit=False)
+    async with session_factory() as sess:
+        yield sess
+        # CASCADE: users → notes → note_tags/note_collections; users → tags/collections
+        await sess.execute(text("DELETE FROM users"))
+        await sess.commit()
+
+
+@pytest_asyncio.fixture
+async def ft_client(ft_session: AsyncSession) -> AsyncClient:
+    """AsyncClient backed by a committed session — for FULLTEXT search tests."""
+
+    async def override_get_db() -> AsyncSession:  # type: ignore[misc]
+        yield ft_session
+
+    app.dependency_overrides[get_db] = override_get_db
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        yield ac
+    app.dependency_overrides.clear()
+
+
+@pytest_asyncio.fixture
+async def ft_auth_client(ft_client: httpx.AsyncClient) -> httpx.AsyncClient:
+    """Pre-authenticated AsyncClient for FULLTEXT search tests.
+
+    Uses ft_client (committed session) so inserted notes are visible to FULLTEXT.
+    """
+    resp = await ft_client.post(
+        "/auth/register",
+        json={"email": "ft@example.com", "password": "Test1234!"},
+    )
+    assert resp.status_code == 201, f"ft register failed: {resp.json()}"
+    resp = await ft_client.post(
+        "/auth/login",
+        json={"email": "ft@example.com", "password": "Test1234!"},
+    )
+    assert resp.status_code == 200, f"ft login failed: {resp.json()}"
+    token = resp.json()["access_token"]
+    ft_client.headers["Authorization"] = f"Bearer {token}"
+    return ft_client
 
 
 @pytest_asyncio.fixture

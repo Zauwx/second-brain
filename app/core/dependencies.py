@@ -33,6 +33,8 @@ from app.core.config import settings
 from app.database import AsyncSessionLocal
 from app.notes.repository import NoteRepository
 from app.notes.service import NoteService
+from app.search.repository import SearchRepository
+from app.search.service import SearchService
 from app.tags.repository import TagRepository
 from app.tags.service import TagService
 
@@ -70,6 +72,13 @@ async def get_collection_service(
 ) -> CollectionService:
     """Construct CollectionService with its repositories for the current request."""
     return CollectionService(CollectionRepository(db), NoteRepository(db))
+
+
+async def get_search_service(
+    db: AsyncSession = Depends(get_db),
+) -> SearchService:
+    """Construct SearchService with its repository for the current request."""
+    return SearchService(SearchRepository(db))
 
 
 async def get_current_user(
