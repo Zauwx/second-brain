@@ -16,7 +16,7 @@ from sqlalchemy import asc, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import InstrumentedAttribute, selectinload
 
-from app.notes.models import Note
+from app.notes.models import Note, note_tags
 from app.notes.schemas import NoteCreate, NoteUpdate
 
 # Whitelisted sort fields — maps token to ORM column object (D-07, T-02-11).
@@ -74,6 +74,7 @@ class NoteRepository:
         size: int,
         sort: str = "-created_at",
         filter: str | None = None,
+        tags: list[str] | None = None,
         *,
         user_id: int,
     ) -> tuple[list[Note], int]:
@@ -87,6 +88,9 @@ class NoteRepository:
                      Defaults to newest-first ('-created_at').
                      Raises ValueError if the field token is not in the whitelist (T-02-11).
             filter:  Optional substring to match against note content (LIKE %term%, D-08).
+            tags:    Optional list of tag names for AND-intersection filter (D-05).
+                     All tags are normalized (strip + lower) before comparison.
+                     Only notes carrying ALL listed tags are returned (HAVING COUNT = N).
             user_id: Scope all results to this owner (D-09). Keyword-only to prevent
                      accidental positional misuse.
 
@@ -116,6 +120,30 @@ class NoteRepository:
             # ilike() binds the user value as a parameter — the f-string only adds wildcards
             # around an already-escaped bound value, not raw SQL text.
             query = query.where(Note.content.ilike(f"%{filter}%"))
+
+        # --- Optional tag AND-intersection filter (D-05) ---
+        # Normalize input (Pitfall 6: ?tag=Python must match stored 'python').
+        # Build a correlated subquery: note_ids whose tag set contains ALL requested tags.
+        # HAVING COUNT(DISTINCT tag_id) == len(tags) ensures strict AND (not OR).
+        # Both the tag-id subquery and the outer query are scoped to user_id (T-04-iso).
+        if tags:
+            from app.tags.models import Tag  # local import — avoids circular at module level
+
+            normalized_tags = [t.strip().lower() for t in tags]
+            tag_id_subq = (
+                select(Tag.id)
+                .where(Tag.name.in_(normalized_tags))
+                .where(Tag.user_id == user_id)
+                .scalar_subquery()
+            )
+            matching_note_ids = (
+                select(note_tags.c.note_id)
+                .where(note_tags.c.tag_id.in_(tag_id_subq))
+                .group_by(note_tags.c.note_id)
+                .having(func.count(note_tags.c.tag_id.distinct()) == len(normalized_tags))
+                .scalar_subquery()
+            )
+            query = query.where(Note.id.in_(matching_note_ids))
 
         # --- Always eager-load tags (prevents MissingGreenlet in async, no N+1) ---
         # selectinload issues one extra SELECT for all tags in the result set.
