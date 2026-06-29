@@ -25,8 +25,8 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [x] **ORG-01**: User can create tags and attach/detach them to notes (many-to-many)
 - [x] **ORG-02**: User can filter notes by one or more tags
-- [ ] **ORG-03**: User can create collections and add/remove notes from them
-- [ ] **ORG-04**: User can list the notes contained in a collection
+- [x] **ORG-03**: User can create collections and add/remove notes from them
+- [x] **ORG-04**: User can list the notes contained in a collection
 
 ### Search
 
@@ -104,8 +104,8 @@ Which phases cover which requirements. Populated during roadmap creation.
 | AUTH-04 | Phase 3 | Pending |
 | ORG-01 | Phase 4 | Complete |
 | ORG-02 | Phase 4 | Complete |
-| ORG-03 | Phase 4 | Pending |
-| ORG-04 | Phase 4 | Pending |
+| ORG-03 | Phase 4 | Complete |
+| ORG-04 | Phase 4 | Complete |
 | SRCH-01 | Phase 4 | Pending |
 | AIL-01 | Phase 5 | Pending |
 | AIL-02 | Phase 5 | Pending |
