@@ -48,8 +48,12 @@ class NoteRepository:
         )
         self._session.add(note)
         await self._session.commit()
-        await self._session.refresh(note)
-        return note
+        # Re-fetch via get_by_id so selectinload(Note.tags) is applied.
+        # session.refresh() would expire the relationship, causing MissingGreenlet
+        # when NoteRead.model_validate() accesses note.tags in async context.
+        created = await self.get_by_id(note.id)
+        assert created is not None  # we just inserted it
+        return created
 
     async def get_by_id(self, note_id: int) -> Note | None:
         """Return the Note with the given id, or None if not found.
@@ -142,8 +146,12 @@ class NoteRepository:
         for field, value in update_data.items():
             setattr(note, field, value)
         await self._session.commit()
-        await self._session.refresh(note)
-        return note
+        # Re-fetch via get_by_id so selectinload(Note.tags) is applied.
+        # session.refresh() expires the tags relationship, causing MissingGreenlet
+        # when NoteRead.model_validate() accesses note.tags in async context.
+        updated = await self.get_by_id(note.id)
+        assert updated is not None  # we just committed it
+        return updated
 
     async def delete(self, note: Note) -> None:
         """Delete the given Note from the database."""

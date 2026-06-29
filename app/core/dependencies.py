@@ -31,6 +31,8 @@ from app.core.config import settings
 from app.database import AsyncSessionLocal
 from app.notes.repository import NoteRepository
 from app.notes.service import NoteService
+from app.tags.repository import TagRepository
+from app.tags.service import TagService
 
 # ---------------------------------------------------------------------------
 # Bearer scheme: auto_error=False is REQUIRED
@@ -52,6 +54,13 @@ async def get_note_service(
 ) -> NoteService:
     """Construct NoteService with its repository for the current request."""
     return NoteService(NoteRepository(db))
+
+
+async def get_tag_service(
+    db: AsyncSession = Depends(get_db),
+) -> TagService:
+    """Construct TagService with its repositories for the current request."""
+    return TagService(TagRepository(db), NoteRepository(db))
 
 
 async def get_current_user(
