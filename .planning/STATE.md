@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 4 context gathered
-last_updated: "2026-06-28T18:30:38.315Z"
-last_activity: 2026-06-28 -- Phase 04 planning complete
+stopped_at: "Phase 04-01 Tags vertical slice complete"
+last_updated: "2026-06-29T17:42:45.195Z"
+last_activity: 2026-06-29
 progress:
   total_phases: 7
   completed_phases: 3
   total_plans: 14
-  completed_plans: 9
-  percent: 43
+  completed_plans: 10
+  percent: 71
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-23)
 
 **Core value:** User can save content and retrieve / query their knowledge in natural language (RAG)
-**Current focus:** Phase 4 — tags, collections, full text search
+**Current focus:** Phase 04 — tags-collections-full-text-search
 
 ## Current Position
 
-Phase: 4
-Plan: Not started
+Phase: 04 (tags-collections-full-text-search) — EXECUTING
+Plan: 2 of 5
 Status: Ready to execute
-Last activity: 2026-06-28 -- Phase 04 planning complete
+Last activity: 2026-06-29
 
-Progress: [████░░░░░░] 43% (3/7 phases complete)
+Progress: [███████░░░] 71%
 
 ## Performance Metrics
 
@@ -59,6 +59,7 @@ Progress: [████░░░░░░] 43% (3/7 phases complete)
 | Phase 01-repo-foundation P03 | 40 | 5 tasks | 4 files |
 | Phase 02 P02 | 20 | 3 tasks | 8 files |
 | Phase 02 P03 | 9 | 2 tasks | 3 files |
+| Phase 04 P01 | 45 | 3 tasks | 14 files |
 
 ## Accumulated Context
 
@@ -85,6 +86,8 @@ Recent decisions affecting current work:
 - [Phase ?]: Routes at /notes/ (trailing slash) and /notes/{note_id} — httpx does not follow redirects
 - [Phase ?]: Sort whitelist dict maps created_at/updated_at tokens to ORM columns; unknown token raises ValueError→422 (no silent fallback)
 - [Phase ?]: Service layer translates repository ValueError to HTTPException 422 to prevent 500 leaking internal errors (T-02-14)
+- [Phase 04 Plan 01]: Two migrations (0004 tags, 0005 collections) instead of one — keeps each vertical slice's migration self-contained
+- [Phase 04 Plan 01]: NoteRepository.create/update use get_by_id re-fetch after commit — session.refresh() exposes MissingGreenlet on Note.tags in async context
 
 ### Pending Todos
 
@@ -103,6 +106,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-28T16:34:50.258Z
-Stopped at: Phase 4 context gathered
-Resume file: .planning/phases/04-tags-collections-full-text-search/04-CONTEXT.md
+Last session: 2026-06-29T17:42:45.186Z
+Stopped at: Phase 04-01 Tags vertical slice complete (80 tests green)
+Resume file: .planning/phases/04-tags-collections-full-text-search/04-01-SUMMARY.md
