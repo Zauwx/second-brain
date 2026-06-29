@@ -30,7 +30,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Search
 
-- [ ] **SRCH-01**: User can full-text search their notes by keyword (MySQL FULLTEXT)
+- [x] **SRCH-01**: User can full-text search their notes by keyword (MySQL FULLTEXT)
 
 ### Local AI (Ollama)
 
@@ -106,7 +106,7 @@ Which phases cover which requirements. Populated during roadmap creation.
 | ORG-02 | Phase 4 | Complete |
 | ORG-03 | Phase 4 | Complete |
 | ORG-04 | Phase 4 | Complete |
-| SRCH-01 | Phase 4 | Pending |
+| SRCH-01 | Phase 4 | Complete |
 | AIL-01 | Phase 5 | Pending |
 | AIL-02 | Phase 5 | Pending |
 | RAG-01 | Phase 6 | Pending |
