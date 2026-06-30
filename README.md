@@ -1,6 +1,12 @@
-# Second Brain
+<p align="center">
+  <img src="assets/logo.png" alt="Second Brain logo" width="180" />
+</p>
 
-A self-hosted personal knowledge base with natural-language Q&A — save notes, articles, and links, organize them with tags and collections, and (in later phases) query your own knowledge using local and cloud AI.
+<h1 align="center">Second Brain</h1>
+
+<p align="center">
+  A self-hosted personal knowledge base with natural-language Q&A — save notes, articles, and links, organize them with tags and collections, and (in later phases) query your own knowledge using local and cloud AI.
+</p>
 
 <!-- CI badge — wired in Phase 7 (GitHub Actions pipeline) -->
 <!-- ![CI](https://github.com/Zauwx/second-brain/actions/workflows/ci.yml/badge.svg) -->
@@ -148,6 +154,16 @@ uv run pytest
 # Start the stack with rebuild (dev)
 docker compose up -d --build
 ```
+
+---
+
+## Contributing
+
+Contributions are welcome! Please read the [Contributing Guide](CONTRIBUTING.md)
+for development setup, coding conventions, and the pull request process. By
+participating you agree to the [Code of Conduct](CODE_OF_CONDUCT.md).
+
+Found a security issue? Please report it privately — see the [Security Policy](SECURITY.md).
 
 ---
 
