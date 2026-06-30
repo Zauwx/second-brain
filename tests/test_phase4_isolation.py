@@ -199,8 +199,8 @@ async def test_missing_collection_returns_404(
 
 
 async def test_search_does_not_leak_across_users(
-    user_a_client: httpx.AsyncClient,
-    user_b_client: httpx.AsyncClient,
+    ft_user_a_client: httpx.AsyncClient,
+    ft_user_b_client: httpx.AsyncClient,
 ) -> None:
     """GET /search/?q= never returns another user's notes — total must be 0.
 
@@ -208,20 +208,28 @@ async def test_search_does_not_leak_across_users(
     `WHERE Note.user_id == caller.id` so user B's results are always scoped
     to B's own notes only.
 
-    The rollback-session fixture means A's note is never committed to disk, so
-    InnoDB's FULLTEXT index will not index it.  The result (total == 0) is the
-    correct isolation assertion: B cannot find A's content regardless of the
-    mechanism.
+    WR-03: this runs on COMMITTED sessions so InnoDB's FULLTEXT index actually
+    indexes A's note. The positive control (A finds the term) proves the row is
+    indexed; B's total == 0 then genuinely exercises the user_id scoping clause —
+    it is no longer trivially true because of an unindexed row.
     """
     unique_term = "xph4isolationgate2026"
-    r = await user_a_client.post(
+    r = await ft_user_a_client.post(
         "/notes/",
         json={"content": f"A's private content containing {unique_term}"},
     )
     assert r.status_code == 201
 
-    # User B searches for A's unique term — must get total == 0
-    resp = await user_b_client.get("/search/", params={"q": unique_term})
+    # Positive control: A CAN find their own committed (indexed) note.
+    a_resp = await ft_user_a_client.get("/search/", params={"q": unique_term})
+    assert a_resp.status_code == 200
+    assert a_resp.json()["total"] >= 1, (
+        "A's own committed note must be FULLTEXT-indexed and findable — "
+        "otherwise B's total == 0 below would be trivially true"
+    )
+
+    # User B searches for A's unique term — must get total == 0 (user_id scoping)
+    resp = await ft_user_b_client.get("/search/", params={"q": unique_term})
     assert resp.status_code == 200
     data = resp.json()
     assert data["total"] == 0, (

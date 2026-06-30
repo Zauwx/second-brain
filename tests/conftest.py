@@ -255,6 +255,66 @@ async def ft_auth_client(ft_client: httpx.AsyncClient) -> httpx.AsyncClient:
 
 
 @pytest_asyncio.fixture
+async def ft_user_a_client(ft_session: AsyncSession) -> AsyncClient:
+    """Authenticated client for user A on a COMMITTED session (WR-03).
+
+    For search-isolation tests: InnoDB FULLTEXT only indexes COMMITTED rows, so
+    user A's note is actually indexed and SearchRepository's `Note.user_id`
+    scoping is genuinely exercised — unlike the rollback `session` fixture, where
+    the row is never indexed and `total == 0` is trivially true regardless of the
+    scoping clause. Shares the same `ft_session` as `ft_user_b_client` so both
+    users' data lives on one committed session, cleaned up by ft_session teardown.
+    """
+
+    async def override_get_db() -> AsyncSession:  # type: ignore[misc]
+        yield ft_session
+
+    app.dependency_overrides[get_db] = override_get_db
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        reg = await ac.post(
+            "/auth/register",
+            json={"email": "fta@example.com", "password": "Test1234!"},
+        )
+        assert reg.status_code == 201, f"ft user A register failed: {reg.json()}"
+        login = await ac.post(
+            "/auth/login",
+            json={"email": "fta@example.com", "password": "Test1234!"},
+        )
+        assert login.status_code == 200, f"ft user A login failed: {login.json()}"
+        ac.headers["Authorization"] = f"Bearer {login.json()['access_token']}"
+        yield ac
+    app.dependency_overrides.clear()
+
+
+@pytest_asyncio.fixture
+async def ft_user_b_client(ft_session: AsyncSession) -> AsyncClient:
+    """Authenticated client for user B on the SAME committed session (WR-03).
+
+    Pairs with `ft_user_a_client` to prove search isolation against committed,
+    FULLTEXT-indexed data.
+    """
+
+    async def override_get_db() -> AsyncSession:  # type: ignore[misc]
+        yield ft_session
+
+    app.dependency_overrides[get_db] = override_get_db
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        reg = await ac.post(
+            "/auth/register",
+            json={"email": "ftb@example.com", "password": "Test1234!"},
+        )
+        assert reg.status_code == 201, f"ft user B register failed: {reg.json()}"
+        login = await ac.post(
+            "/auth/login",
+            json={"email": "ftb@example.com", "password": "Test1234!"},
+        )
+        assert login.status_code == 200, f"ft user B login failed: {login.json()}"
+        ac.headers["Authorization"] = f"Bearer {login.json()['access_token']}"
+        yield ac
+    app.dependency_overrides.clear()
+
+
+@pytest_asyncio.fixture
 async def user_b_client(session: AsyncSession) -> AsyncClient:
     """Authenticated AsyncClient for user B (b@example.com) — cross-user isolation tests.
 
