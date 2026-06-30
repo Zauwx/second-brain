@@ -102,6 +102,24 @@ async def test_update_note_clears_title_with_null(auth_client: httpx.AsyncClient
     assert get_resp.json()["title"] is None
 
 
+async def test_update_note_null_content_returns_422(auth_client: httpx.AsyncClient) -> None:
+    """PUT {"content": null} must be rejected with 422, not 500 (WR-02).
+
+    content maps to a NOT NULL column; an explicit null previously reached the DB
+    and raised IntegrityError → unhandled 500. The NoteUpdate validator now rejects
+    it at the schema boundary.
+    """
+    create_resp = await auth_client.post("/notes/", json={"content": "keep me"})
+    note_id = create_resp.json()["id"]
+
+    update_resp = await auth_client.put(f"/notes/{note_id}", json={"content": None})
+    assert update_resp.status_code == 422
+
+    # The original content must be intact.
+    get_resp = await auth_client.get(f"/notes/{note_id}")
+    assert get_resp.json()["content"] == "keep me"
+
+
 async def test_update_note_omitted_title_is_untouched(auth_client: httpx.AsyncClient) -> None:
     """PUT without title must leave the existing title intact (WR-06 — partial update)."""
     create_resp = await auth_client.post(
