@@ -102,7 +102,3 @@ class NoteListResponse(BaseModel):
     page: int = Field(description="Current page number (1-indexed)")
     size: int = Field(description="Number of items per page")
     pages: int = Field(description="Total number of pages")
-
-
-# Deprecated alias — kept for backward compatibility during transition.
-PaginatedNotes = NoteListResponse
