@@ -84,17 +84,21 @@ class TagRepository:
         """Attach a tag to a note (idempotent — no-op if already attached).
 
         ORM manages the note_tags join-table row; no manual INSERT needed.
-        Flush ensures the row is visible to subsequent queries in the same transaction.
+        Commits so the new tag (created by find_or_create) and the note_tags
+        join row are durably persisted — matching NoteRepository/CollectionRepository
+        which all commit. A bare flush() would be rolled back when the request
+        session closes, silently discarding the tag in production (CR-01).
         """
         if tag not in note.tags:
             note.tags.append(tag)
-        await self._session.flush()
+        await self._session.commit()
 
     async def detach(self, note: Note, tag: Tag) -> None:
         """Detach a tag from a note.
 
-        ORM manages the note_tags row deletion on flush.
+        ORM manages the note_tags row deletion. Commits so the removal is durably
+        persisted; a bare flush() would be rolled back on session close (CR-01).
         Caller is responsible for verifying the tag is actually attached.
         """
         note.tags.remove(tag)
-        await self._session.flush()
+        await self._session.commit()

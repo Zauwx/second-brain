@@ -82,16 +82,29 @@ async def test_engine(test_database_url: str, run_migrations: None):
 async def session(test_engine) -> AsyncSession:
     """Per-test AsyncSession with transaction rollback for isolation (D-18).
 
-    Opens a connection + outer transaction, binds a session to it, yields the
-    session to the test, then rolls back — leaving the DB pristine for the next
+    Opens a connection + outer transaction, binds a session to it with
+    ``join_transaction_mode="create_savepoint"``, yields the session to the test,
+    then rolls back the outer transaction — leaving the DB pristine for the next
     test without touching the real MySQL container data.
+
+    The ``create_savepoint`` join mode is the SQLAlchemy-recommended test-suite
+    pattern: any ``session.commit()`` issued by the app under test (e.g.
+    NoteRepository.create or TagRepository.attach/detach — CR-01) releases a
+    SAVEPOINT instead of committing the outer transaction, so the test stays
+    isolated AND the application's real commit path is exercised. Without this,
+    a route that commits would either break isolation or be indistinguishable
+    from a flush.
     """
     async with test_engine.connect() as conn:
-        await conn.begin()
-        session_factory = async_sessionmaker(bind=conn, expire_on_commit=False)
+        trans = await conn.begin()
+        session_factory = async_sessionmaker(
+            bind=conn,
+            expire_on_commit=False,
+            join_transaction_mode="create_savepoint",
+        )
         async with session_factory() as sess:
             yield sess
-        await conn.rollback()
+        await trans.rollback()
 
 
 @pytest_asyncio.fixture
