@@ -51,7 +51,8 @@ def _make_service(session: AsyncSession) -> NoteService:
         "Returns a paginated list of the authenticated user's notes. "
         "Use `page` and `size` for pagination, "
         "`sort` for sort order (prefix with '-' for descending), "
-        "and `filter` for a case-insensitive substring match on content. "
+        "`filter` for a case-insensitive substring match on content, "
+        "and `tag` (repeatable) for AND-intersection tag filtering. "
         "Requires a valid Bearer access token — 401 if missing or invalid."
     ),
 )
@@ -60,12 +61,13 @@ async def list_notes(
     size: int = Query(20, ge=1, le=100),
     sort: str = Query("-created_at"),
     filter: str | None = Query(None),
+    tag: list[str] | None = Query(default=None),
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> NoteListResponse:
     """GET /notes/ — returns paginated notes owned by the authenticated user (D-09)."""
     return await _make_service(session).list_notes(
-        page=page, size=size, sort=sort, filter=filter, user_id=current_user.id
+        page=page, size=size, sort=sort, filter=filter, tags=tag, user_id=current_user.id
     )
 
 

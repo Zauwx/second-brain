@@ -27,10 +27,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.models import User
 from app.auth.repository import AuthRepository
+from app.collections.repository import CollectionRepository
+from app.collections.service import CollectionService
 from app.core.config import settings
 from app.database import AsyncSessionLocal
 from app.notes.repository import NoteRepository
 from app.notes.service import NoteService
+from app.search.repository import SearchRepository
+from app.search.service import SearchService
+from app.tags.repository import TagRepository
+from app.tags.service import TagService
 
 # ---------------------------------------------------------------------------
 # Bearer scheme: auto_error=False is REQUIRED
@@ -52,6 +58,27 @@ async def get_note_service(
 ) -> NoteService:
     """Construct NoteService with its repository for the current request."""
     return NoteService(NoteRepository(db))
+
+
+async def get_tag_service(
+    db: AsyncSession = Depends(get_db),
+) -> TagService:
+    """Construct TagService with its repositories for the current request."""
+    return TagService(TagRepository(db), NoteRepository(db))
+
+
+async def get_collection_service(
+    db: AsyncSession = Depends(get_db),
+) -> CollectionService:
+    """Construct CollectionService with its repositories for the current request."""
+    return CollectionService(CollectionRepository(db), NoteRepository(db))
+
+
+async def get_search_service(
+    db: AsyncSession = Depends(get_db),
+) -> SearchService:
+    """Construct SearchService with its repository for the current request."""
+    return SearchService(SearchRepository(db))
 
 
 async def get_current_user(

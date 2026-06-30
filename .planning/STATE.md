@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: planning
-stopped_at: Phase 4 context gathered
-last_updated: "2026-06-28T16:34:50.274Z"
-last_activity: 2026-06-25
+status: ready_to_plan
+stopped_at: Phase 04 complete (5/5) — ready to discuss Phase 5
+last_updated: 2026-06-30T07:41:25.901Z
+last_activity: 2026-06-29
 progress:
   total_phases: 7
-  completed_phases: 3
-  total_plans: 9
-  completed_plans: 9
-  percent: 43
+  completed_phases: 4
+  total_plans: 14
+  completed_plans: 14
+  percent: 57
 ---
 
 # Project State
@@ -21,22 +21,22 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-23)
 
 **Core value:** User can save content and retrieve / query their knowledge in natural language (RAG)
-**Current focus:** Phase 4 — tags, collections, full text search
+**Current focus:** Phase 5 — local ai (ollama)
 
 ## Current Position
 
-Phase: 4
+Phase: 5
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-06-25
+Last activity: 2026-06-30
 
-Progress: [████░░░░░░] 43% (3/7 phases complete)
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 9
+- Total plans completed: 14
 - Average duration: -
 - Total execution time: 0.0 hours
 
@@ -47,6 +47,7 @@ Progress: [████░░░░░░] 43% (3/7 phases complete)
 | 01 | 3 | - | - |
 | 02 | 3 | - | - |
 | 03 | 3 | - | - |
+| 04 | 5 | - | - |
 
 **Recent Trend:**
 
@@ -59,6 +60,11 @@ Progress: [████░░░░░░] 43% (3/7 phases complete)
 | Phase 01-repo-foundation P03 | 40 | 5 tasks | 4 files |
 | Phase 02 P02 | 20 | 3 tasks | 8 files |
 | Phase 02 P03 | 9 | 2 tasks | 3 files |
+| Phase 04 P01 | 45 | 3 tasks | 14 files |
+| Phase 04 P02 | 15 | 2 tasks | 4 files |
+| Phase 04 P03 | 20 | 3 tasks | 11 files |
+| Phase 04 P04 | 20 | 2 tasks | 10 files |
+| Phase 04 P05 | 10 | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -85,6 +91,8 @@ Recent decisions affecting current work:
 - [Phase ?]: Routes at /notes/ (trailing slash) and /notes/{note_id} — httpx does not follow redirects
 - [Phase ?]: Sort whitelist dict maps created_at/updated_at tokens to ORM columns; unknown token raises ValueError→422 (no silent fallback)
 - [Phase ?]: Service layer translates repository ValueError to HTTPException 422 to prevent 500 leaking internal errors (T-02-14)
+- [Phase 04 Plan 01]: Two migrations (0004 tags, 0005 collections) instead of one — keeps each vertical slice's migration self-contained
+- [Phase 04 Plan 01]: NoteRepository.create/update use get_by_id re-fetch after commit — session.refresh() exposes MissingGreenlet on Note.tags in async context
 
 ### Pending Todos
 
@@ -103,6 +111,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-28T16:34:50.258Z
-Stopped at: Phase 4 context gathered
-Resume file: .planning/phases/04-tags-collections-full-text-search/04-CONTEXT.md
+Last session: 2026-06-29T20:39:55.758Z
+Stopped at: Phase 04-01 Tags vertical slice complete (80 tests green)
+Resume file: None

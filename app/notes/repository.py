@@ -14,9 +14,9 @@ from datetime import datetime
 
 from sqlalchemy import asc, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import InstrumentedAttribute
+from sqlalchemy.orm import InstrumentedAttribute, selectinload
 
-from app.notes.models import Note
+from app.notes.models import Note, note_tags
 from app.notes.schemas import NoteCreate, NoteUpdate
 
 # Whitelisted sort fields — maps token to ORM column object (D-07, T-02-11).
@@ -48,8 +48,12 @@ class NoteRepository:
         )
         self._session.add(note)
         await self._session.commit()
-        await self._session.refresh(note)
-        return note
+        # Re-fetch via get_by_id so selectinload(Note.tags) is applied.
+        # session.refresh() would expire the relationship, causing MissingGreenlet
+        # when NoteRead.model_validate() accesses note.tags in async context.
+        created = await self.get_by_id(note.id)
+        assert created is not None  # we just inserted it
+        return created
 
     async def get_by_id(self, note_id: int) -> Note | None:
         """Return the Note with the given id, or None if not found.
@@ -57,7 +61,11 @@ class NoteRepository:
         Ownership check is NOT performed here — that is the service's responsibility (D-08).
         The repository always fetches by PK only; NoteService.get_or_404_owned checks owner.
         """
-        result = await self._session.execute(select(Note).where(Note.id == note_id))
+        result = await self._session.execute(
+            select(Note)
+            .where(Note.id == note_id)
+            .options(selectinload(Note.tags))
+        )
         return result.scalar_one_or_none()
 
     async def list_paginated(
@@ -66,6 +74,7 @@ class NoteRepository:
         size: int,
         sort: str = "-created_at",
         filter: str | None = None,
+        tags: list[str] | None = None,
         *,
         user_id: int,
     ) -> tuple[list[Note], int]:
@@ -79,6 +88,9 @@ class NoteRepository:
                      Defaults to newest-first ('-created_at').
                      Raises ValueError if the field token is not in the whitelist (T-02-11).
             filter:  Optional substring to match against note content (LIKE %term%, D-08).
+            tags:    Optional list of tag names for AND-intersection filter (D-05).
+                     All tags are normalized (strip + lower) before comparison.
+                     Only notes carrying ALL listed tags are returned (HAVING COUNT = N).
             user_id: Scope all results to this owner (D-09). Keyword-only to prevent
                      accidental positional misuse.
 
@@ -109,6 +121,35 @@ class NoteRepository:
             # around an already-escaped bound value, not raw SQL text.
             query = query.where(Note.content.ilike(f"%{filter}%"))
 
+        # --- Optional tag AND-intersection filter (D-05) ---
+        # Normalize input (Pitfall 6: ?tag=Python must match stored 'python').
+        # Build a correlated subquery: note_ids whose tag set contains ALL requested tags.
+        # HAVING COUNT(DISTINCT tag_id) == len(tags) ensures strict AND (not OR).
+        # Both the tag-id subquery and the outer query are scoped to user_id (T-04-iso).
+        if tags:
+            from app.tags.models import Tag  # local import — avoids circular at module level
+
+            normalized_tags = [t.strip().lower() for t in tags]
+            tag_id_subq = (
+                select(Tag.id)
+                .where(Tag.name.in_(normalized_tags))
+                .where(Tag.user_id == user_id)
+                .scalar_subquery()
+            )
+            matching_note_ids = (
+                select(note_tags.c.note_id)
+                .where(note_tags.c.tag_id.in_(tag_id_subq))
+                .group_by(note_tags.c.note_id)
+                .having(func.count(note_tags.c.tag_id.distinct()) == len(normalized_tags))
+                .scalar_subquery()
+            )
+            query = query.where(Note.id.in_(matching_note_ids))
+
+        # --- Always eager-load tags (prevents MissingGreenlet in async, no N+1) ---
+        # selectinload issues one extra SELECT for all tags in the result set.
+        # Must be applied BEFORE count so both count + page queries see consistent options.
+        query = query.options(selectinload(Note.tags))
+
         # --- Accurate filtered total count (BEFORE offset/limit) ---
         # Count is computed over the owner-scoped (+ filtered) subquery so it reflects
         # matches for this user, not the full collection.
@@ -133,8 +174,12 @@ class NoteRepository:
         for field, value in update_data.items():
             setattr(note, field, value)
         await self._session.commit()
-        await self._session.refresh(note)
-        return note
+        # Re-fetch via get_by_id so selectinload(Note.tags) is applied.
+        # session.refresh() expires the tags relationship, causing MissingGreenlet
+        # when NoteRead.model_validate() accesses note.tags in async context.
+        updated = await self.get_by_id(note.id)
+        assert updated is not None  # we just committed it
+        return updated
 
     async def delete(self, note: Note) -> None:
         """Delete the given Note from the database."""

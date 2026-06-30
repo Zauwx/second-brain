@@ -72,6 +72,7 @@ class NoteService:
         size: int = 20,
         sort: str = "-created_at",
         filter: str | None = None,
+        tags: list[str] | None = None,
         *,
         user_id: int,
     ) -> NoteListResponse:
@@ -83,6 +84,8 @@ class NoteService:
             sort:    Sort expression (leading '-' = descending).
                      Unknown sort fields yield HTTP 422 (D-07/D-09, T-02-11/T-02-14).
             filter:  Optional substring match on note content.
+            tags:    Optional list of tag names for AND-intersection filter (D-05).
+                     Normalized strip+lower before repository comparison.
             user_id: Scope results to this owner — keyword-only to prevent positional errors.
 
         Returns:
@@ -93,7 +96,7 @@ class NoteService:
         """
         try:
             items, total = await self._repo.list_paginated(
-                page, size, sort, filter, user_id=user_id
+                page, size, sort, filter, tags, user_id=user_id
             )
         except ValueError as exc:
             # Repository raises ValueError for unknown sort tokens (D-07, T-02-11).

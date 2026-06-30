@@ -23,14 +23,14 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Organization
 
-- [ ] **ORG-01**: User can create tags and attach/detach them to notes (many-to-many)
-- [ ] **ORG-02**: User can filter notes by one or more tags
-- [ ] **ORG-03**: User can create collections and add/remove notes from them
-- [ ] **ORG-04**: User can list the notes contained in a collection
+- [x] **ORG-01**: User can create tags and attach/detach them to notes (many-to-many)
+- [x] **ORG-02**: User can filter notes by one or more tags
+- [x] **ORG-03**: User can create collections and add/remove notes from them
+- [x] **ORG-04**: User can list the notes contained in a collection
 
 ### Search
 
-- [ ] **SRCH-01**: User can full-text search their notes by keyword (MySQL FULLTEXT)
+- [x] **SRCH-01**: User can full-text search their notes by keyword (MySQL FULLTEXT)
 
 ### Local AI (Ollama)
 
@@ -102,11 +102,11 @@ Which phases cover which requirements. Populated during roadmap creation.
 | AUTH-02 | Phase 3 | Pending |
 | AUTH-03 | Phase 3 | Pending |
 | AUTH-04 | Phase 3 | Pending |
-| ORG-01 | Phase 4 | Pending |
-| ORG-02 | Phase 4 | Pending |
-| ORG-03 | Phase 4 | Pending |
-| ORG-04 | Phase 4 | Pending |
-| SRCH-01 | Phase 4 | Pending |
+| ORG-01 | Phase 4 | Complete |
+| ORG-02 | Phase 4 | Complete |
+| ORG-03 | Phase 4 | Complete |
+| ORG-04 | Phase 4 | Complete |
+| SRCH-01 | Phase 4 | Complete |
 | AIL-01 | Phase 5 | Pending |
 | AIL-02 | Phase 5 | Pending |
 | RAG-01 | Phase 6 | Pending |
