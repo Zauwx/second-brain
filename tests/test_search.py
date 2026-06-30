@@ -147,6 +147,44 @@ async def test_mixed_stray_operators_returns_200(
     assert response.status_code == 200
 
 
+async def test_unbalanced_phrase_quote_returns_200(auth_client: httpx.AsyncClient) -> None:
+    """A lone double-quote (unterminated phrase) is sanitized — 200, not 500 (WR-01)."""
+    response = await auth_client.get("/search/", params={"q": '"'})
+    assert response.status_code == 200
+
+
+async def test_unbalanced_open_paren_returns_200(auth_client: httpx.AsyncClient) -> None:
+    """A lone '(' (unbalanced grouping) is sanitized — 200, not 500 (WR-01)."""
+    response = await auth_client.get("/search/", params={"q": "("})
+    assert response.status_code == 200
+
+
+async def test_unbalanced_close_paren_returns_200(auth_client: httpx.AsyncClient) -> None:
+    """A lone ')' (unbalanced grouping) is sanitized — 200, not 500 (WR-01)."""
+    response = await auth_client.get("/search/", params={"q": ")"})
+    assert response.status_code == 200
+
+
+async def test_rank_and_contribution_operators_return_200(
+    auth_client: httpx.AsyncClient,
+) -> None:
+    """Stray ~ < > operators are sanitized — 200, not 500 (WR-01)."""
+    response = await auth_client.get("/search/", params={"q": "~test <foo >bar"})
+    assert response.status_code == 200
+
+
+async def test_lone_wildcard_returns_200(auth_client: httpx.AsyncClient) -> None:
+    """A standalone '*' (truncation with no token) is sanitized — 200, not 500 (WR-01)."""
+    response = await auth_client.get("/search/", params={"q": "*"})
+    assert response.status_code == 200
+
+
+async def test_phrase_and_group_chars_return_200(auth_client: httpx.AsyncClient) -> None:
+    """A query mixing quotes and parens around a term returns 200 (WR-01)."""
+    response = await auth_client.get("/search/", params={"q": '"hello (world)"'})
+    assert response.status_code == 200
+
+
 async def test_whitespace_only_query_returns_empty_envelope(
     auth_client: httpx.AsyncClient,
 ) -> None:
