@@ -30,6 +30,27 @@ branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 
+def _drop_ft_index_if_exists() -> None:
+    """DROP the ft_notes_content FULLTEXT index only if it currently exists (WR-04).
+
+    MySQL has no portable ``DROP INDEX IF EXISTS`` for ordinary/FULLTEXT indexes,
+    so unconditionally dropping fails hard if an earlier revision never created it
+    (or it was renamed/already dropped on a given DB). Check information_schema
+    first and make the drop idempotent.
+    """
+    conn = op.get_bind()
+    exists = conn.execute(
+        sa.text(
+            "SELECT COUNT(*) FROM information_schema.STATISTICS "
+            "WHERE table_schema = DATABASE() "
+            "AND table_name = 'notes' "
+            "AND index_name = 'ft_notes_content'"
+        )
+    ).scalar()
+    if exists:
+        op.execute("ALTER TABLE notes DROP INDEX ft_notes_content")
+
+
 def upgrade() -> None:
     # 1. tags table — per-user, normalized name, unique per user
     op.create_table(
@@ -69,13 +90,15 @@ def upgrade() -> None:
     # The old index was created by d51191e92276 before min_token_size was configured.
     # DROP + ADD ensures the new index uses the server's current min_token_size=2 setting.
     # op.create_index doesn't support FULLTEXT — use raw DDL.
-    op.execute("ALTER TABLE notes DROP INDEX ft_notes_content")
+    # The DROP is guarded (WR-04) so the migration does not fail mid-upgrade on a DB
+    # where the index was never created / already dropped.
+    _drop_ft_index_if_exists()
     op.execute("ALTER TABLE notes ADD FULLTEXT KEY ft_notes_content (title, content)")
 
 
 def downgrade() -> None:
     # Restore FULLTEXT index (rebuilt back; no way to restore previous token-size setting)
-    op.execute("ALTER TABLE notes DROP INDEX ft_notes_content")
+    _drop_ft_index_if_exists()
     op.execute("ALTER TABLE notes ADD FULLTEXT KEY ft_notes_content (title, content)")
     op.drop_table("note_tags")
     op.drop_table("tags")
