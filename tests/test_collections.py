@@ -14,7 +14,6 @@ Uses `auth_client` for single-user tests and `user_a_client`/`user_b_client` for
 
 import httpx
 
-
 # ---------------------------------------------------------------------------
 # Create collection
 # ---------------------------------------------------------------------------

@@ -27,7 +27,6 @@ transaction.  All tests run against real MySQL via testcontainers (D-16).
 
 import httpx
 
-
 # ---------------------------------------------------------------------------
 # Tag isolation
 # ---------------------------------------------------------------------------
