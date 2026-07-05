@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 5 context gathered
-last_updated: "2026-07-05T15:57:17.801Z"
-last_activity: 2026-07-05 -- Phase 5 planning complete
+stopped_at: Completed 05-01-PLAN.md
+last_updated: "2026-07-05T18:15:40.307Z"
+last_activity: 2026-07-05
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 18
-  completed_plans: 14
+  completed_plans: 15
   percent: 57
 ---
 
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-23)
 
 **Core value:** User can save content and retrieve / query their knowledge in natural language (RAG)
-**Current focus:** Phase 5 — local ai (ollama)
+**Current focus:** Phase 05 — local-ai-ollama
 
 ## Current Position
 
-Phase: 5
-Plan: Not started
+Phase: 05 (local-ai-ollama) — EXECUTING
+Plan: 2 of 4
 Status: Ready to execute
-Last activity: 2026-07-05 -- Phase 5 planning complete
+Last activity: 2026-07-05
 
-Progress: [██████████] 100%
+Progress: [████████░░] 83%
 
 ## Performance Metrics
 
@@ -65,6 +65,7 @@ Progress: [██████████] 100%
 | Phase 04 P03 | 20 | 3 tasks | 11 files |
 | Phase 04 P04 | 20 | 2 tasks | 10 files |
 | Phase 04 P05 | 10 | 1 tasks | 1 files |
+| Phase 05 P01 | 12 | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -93,6 +94,8 @@ Recent decisions affecting current work:
 - [Phase ?]: Service layer translates repository ValueError to HTTPException 422 to prevent 500 leaking internal errors (T-02-14)
 - [Phase 04 Plan 01]: Two migrations (0004 tags, 0005 collections) instead of one — keeps each vertical slice's migration self-contained
 - [Phase 04 Plan 01]: NoteRepository.create/update use get_by_id re-fetch after commit — session.refresh() exposes MissingGreenlet on Note.tags in async context
+- [Phase ?]: [Phase 05 Plan 01]: ollama Compose service uses top-level mem_limit: 4g (not deploy.resources) since plain docker compose up ignores the Swarm key (D-09)
+- [Phase ?]: [Phase 05 Plan 01]: ollama healthcheck is [CMD, ollama, list] not curl — the ollama/ollama image ships no curl binary
 
 ### Pending Todos
 
@@ -111,6 +114,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-07-05T14:56:47.990Z
-Stopped at: Phase 5 context gathered
-Resume file: .planning/phases/05-local-ai-ollama/05-CONTEXT.md
+Last session: 2026-07-05T18:15:40.298Z
+Stopped at: Completed 05-01-PLAN.md
+Resume file: None
