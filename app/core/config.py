@@ -32,6 +32,15 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 15
     refresh_token_expire_days: int = 7
 
+    # Ollama (Phase 5) — local LLM runtime on the internal Docker network.
+    # No secret/auth token in this internal-network-only setup, so no
+    # @model_validator guard is needed (unlike jwt_secret_key). .env.example
+    # documents these keys; extra="ignore" already tolerates them.
+    ollama_base_url: str = "http://ollama:11434"
+    ollama_chat_model: str = "llama3.2:3b"
+    ollama_timeout_seconds: float = 30.0
+    ollama_max_retries: int = 3
+
     @model_validator(mode="after")
     def _require_secret_outside_dev(self) -> "Settings":
         """Fail closed if the JWT secret is weak/default outside development (CR-01).
