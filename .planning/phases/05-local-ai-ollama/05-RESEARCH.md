@@ -583,22 +583,22 @@ async def test_ollama_down_returns_503(ai_client, fake_llm_provider):
 | A4 | Grammar-constrained `format=<json_schema>` structured output works reliably with `llama3.2:3b` specifically (not just larger/instruction-tuned models) | Don't Hand-Roll, State of the Art | Low — D-05 already mandates lenient parsing regardless, so even if strict-schema mode behaves unexpectedly on this small model, the fallback parser (Pattern 4) absorbs the risk; not a blocking assumption |
 | A5 | `ollama.ResponseError` (not just `ConnectionError`) is the exception type raised for "model not found" — should be added to the 503-translation catch list | Common Pitfalls #1 | Medium — if unverified during implementation, a missing-model error could surface as an unhandled 500 instead of a clean 503; planner should write and run the "model not pulled" test case explicitly against the fake provider (`should_fail` variant) and, if feasible, once against a real un-pulled Ollama instance |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Does `format=<json_schema>` (strict) meaningfully outperform `format="json"` (loose) + lenient parsing for `llama3.2:3b` specifically, given D-05's explicit tolerance for format drift?**
    - What we know: Ollama's structured-outputs feature is server-side grammar-constrained decoding, documented as model-agnostic in principle.
    - What's unclear: Whether a 3B model's actual output quality (not just JSON-validity) differs meaningfully between the two modes for a "list of 3-6 tag strings" task.
-   - Recommendation: Start with `format="json"` (simpler, one line) + the lenient parser; only reach for a Pydantic schema (`format=StringList.model_json_schema()`) if manual testing during implementation shows the loose mode producing unusable output (e.g., tags buried in prose despite `format="json"`).
+   - RESOLVED: Start with `format="json"` (simpler, one line) + the lenient parser; only reach for a Pydantic schema (`format=StringList.model_json_schema()`) if manual testing during implementation shows the loose mode producing unusable output (e.g., tags buried in prose despite `format="json"`). Plan 05-04 adopts `format="json"` + lenient parser.
 
 2. **Should the model-provisioning step (`ollama pull llama3.2:3b`) be automated via a Compose one-shot init service, or documented as a manual step?**
    - What we know: Auto-pulling inside the request path is explicitly wrong (Anti-Patterns); CLAUDE.md's prod guidance is to prebake models into a custom image (deferred to Phase 7).
    - What's unclear: Whether the planner wants a `docker-compose.override.yml` init container (`command: ["sh", "-c", "ollama pull llama3.2:3b"]` on a short-lived container depending on `ollama` being healthy) for a smoother `docker compose up` first-run experience, vs. keeping the dev Compose file minimal and documenting the manual `docker compose exec` step in the README.
-   - Recommendation: Document the manual step for this phase (lowest complexity, matches "learning project" ethos of visible steps) and leave the init-container automation as a Phase 7 polish item if desired.
+   - RESOLVED: Document the manual step for this phase (lowest complexity, matches "learning project" ethos of visible steps) and leave the init-container automation as a Phase 7 polish item if desired. Plans 05-01/05-04 document the manual `docker compose exec ollama ollama pull llama3.2:3b` step.
 
 3. **Exact endpoint request-body shape for `/ai/summarize` and `/ai/suggest-tags`.**
    - What we know: ROADMAP.md's success criteria literally say "`POST /ai/summarize` with a note ID" and "`POST /ai/suggest-tags` with a note ID" — implying `/ai/...` paths (not `/notes/{id}/summarize`), with the note ID most likely in a JSON body (`{"note_id": int}`) given the plural "with a note ID" phrasing rather than a URL param.
    - What's unclear: Whether the planner prefers the note ID as a path parameter on the `/ai/...` prefix instead (e.g. `POST /ai/summarize/{note_id}`).
-   - Recommendation: Use `POST /ai/summarize` and `POST /ai/suggest-tags`, each taking `{"note_id": int}` in the request body (a small `SummarizeRequest`/`SuggestTagsRequest` Pydantic schema) — matches the literal roadmap wording and keeps both endpoints structurally identical.
+   - RESOLVED: Use `POST /ai/summarize` and `POST /ai/suggest-tags`, each taking `{"note_id": int}` in the request body (a small `SummarizeRequest`/`SuggestTagsRequest` Pydantic schema) — matches the literal roadmap wording and keeps both endpoints structurally identical. Plans 05-03/05-04 adopt the `{"note_id": int}` body shape.
 
 ## Environment Availability
 
