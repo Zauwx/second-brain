@@ -4,14 +4,14 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Completed 05-03-PLAN.md
-last_updated: "2026-07-06T13:41:28.452Z"
+last_updated: "2026-07-06T17:12:00.900Z"
 last_activity: 2026-07-06
 progress:
   total_phases: 7
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 18
-  completed_plans: 17
-  percent: 57
+  completed_plans: 18
+  percent: 71
 ---
 
 # Project State
@@ -103,6 +103,7 @@ Recent decisions affecting current work:
 - [Phase 05]: [Phase 05 Plan 03]: AIService reuses NoteService.get_or_404_owned; _safe_complete is the only place raising HTTPException(503), catching ConnectionError/TimeoutError/OSError/ollama.ResponseError
 - [Phase 05]: [Phase 05 Plan 03]: Summarize response reuses NoteRead instead of a bespoke SummarizeResponse schema
 - [Phase 05]: [Phase 05 Plan 03]: retry-then-succeed test fake implements its own internal tenacity retry mirroring OllamaProvider, since AIService calls provider.complete() exactly once per request
+- [Phase 05 Plan 04]: _parse_tag_list implemented verbatim from RESEARCH.md Pattern 4 (json.loads -> regex [...] fallback -> dict-unwrap -> coerce -> []); AIService.suggest_tags has no write path at all, structurally enforcing suggest-only D-04
 
 ### Pending Todos
 
@@ -110,7 +111,9 @@ None yet.
 
 ### Blockers/Concerns
 
-None yet.
+yet.
+
+- 05-04 Task 3 (live end-to-end phase verification checkpoint) awaiting human execution — code (Tasks 1-2) complete and committed, full mocked suite green (128 passed). See 05-04-SUMMARY.md 'Pending Checkpoint' for exact commands.
 
 ## Deferred Items
 
@@ -121,6 +124,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-07-06T13:41:28.444Z
+Last session: 2026-07-06T16:52:16.612Z
 Stopped at: Completed 05-03-PLAN.md
 Resume file: None
