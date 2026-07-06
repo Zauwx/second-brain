@@ -20,6 +20,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from app.ai.router import router as ai_router
 from app.api.health import router as health_router
 from app.auth.router import router as auth_router
 from app.collections.router import router as collections_router
@@ -60,3 +61,4 @@ app.include_router(notes_router, prefix="/notes")
 app.include_router(tags_router)  # no prefix — owns /tags and /notes/{id}/tags
 app.include_router(collections_router, prefix="/collections")
 app.include_router(search_router, prefix="/search")
+app.include_router(ai_router, prefix="/ai")

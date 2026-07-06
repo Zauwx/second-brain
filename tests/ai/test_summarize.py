@@ -19,28 +19,37 @@ they must fail now because POST /ai/summarize and Note.summary do not exist yet.
 """
 
 import httpx
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_fixed
 
 from app.core.dependencies import get_llm_provider
 from app.main import app
 
 
 class _RetryThenSucceedProvider:
-    """Fake LLMProvider that raises ConnectionError once, then succeeds.
+    """Fake LLMProvider whose complete() retries internally like OllamaProvider.
 
-    Injected via the same app.dependency_overrides[get_llm_provider] mechanism
-    as FakeLLMProvider — proves retry-then-succeed at the service/provider
-    boundary without ever hitting a real network (D-08, D-10).
+    Raises ConnectionError on the first internal attempt, then succeeds on the
+    second — wrapped in the SAME tenacity retry shape OllamaProvider uses
+    (Pattern 2), so AIService.summarize still calls provider.complete() exactly
+    once from its perspective while the retry-then-succeed boundary (D-08) is
+    genuinely exercised without any real network call.
     """
 
     def __init__(self, response: str) -> None:
         self.response = response
         self.calls: list[tuple[str, bool]] = []
-        self._raised_once = False
+        self._attempts = 0
 
+    @retry(
+        retry=retry_if_exception_type(ConnectionError),
+        stop=stop_after_attempt(3),
+        wait=wait_fixed(0),
+        reraise=True,
+    )
     async def complete(self, prompt: str, *, json_mode: bool = False) -> str:
         self.calls.append((prompt, json_mode))
-        if not self._raised_once:
-            self._raised_once = True
+        self._attempts += 1
+        if self._attempts == 1:
             raise ConnectionError("mock: transient ollama blip")
         return self.response
 
@@ -70,6 +79,7 @@ async def test_summarize_persists_and_uses_mock_only(
 
 async def test_ollama_down_returns_503(
     ai_client: httpx.AsyncClient,
+    auth_client: httpx.AsyncClient,
     fake_llm_provider,
 ) -> None:
     """Ollama unreachable → 503; note CRUD (GET) still works (D-07)."""
@@ -88,6 +98,7 @@ async def test_ollama_down_returns_503(
 
 async def test_summarize_retries_then_succeeds(
     ai_client: httpx.AsyncClient,
+    auth_client: httpx.AsyncClient,
 ) -> None:
     """A transient ConnectionError followed by success still yields 200 (D-08)."""
     retry_provider = _RetryThenSucceedProvider("Summary after one transient failure.")
