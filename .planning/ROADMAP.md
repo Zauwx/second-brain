@@ -99,7 +99,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 4 plans
 - [x] 05-01-PLAN.md — Foundation infra: ollama Docker service (mem_limit, internal-only, healthcheck) + ollama/tenacity deps + settings
 - [x] 05-02-PLAN.md — Provider seam: LLMProvider protocol + OllamaProvider (tenacity), /health Ollama probe, Wave 0 FakeLLMProvider test infra
-- [ ] 05-03-PLAN.md — Summarize slice (AIL-01): migration 0006 Note.summary, AIService.summarize, POST /ai/summarize (persists), 503/ownership
+- [x] 05-03-PLAN.md — Summarize slice (AIL-01): migration 0006 Note.summary, AIService.summarize, POST /ai/summarize (persists), 503/ownership
 - [ ] 05-04-PLAN.md — Suggest-tags slice (AIL-02): AIService.suggest_tags + lenient parser, POST /ai/suggest-tags (suggest-only), live end-to-end checkpoint
 
 ### Phase 6: RAG Pipeline
@@ -140,6 +140,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 2. Database + API Skeleton | 3/3 | Complete   | 2026-06-24 |
 | 3. Auth + Per-User Data Isolation | 3/3 | Complete   | 2026-06-25 |
 | 4. Tags, Collections, Full-Text Search | 5/5 | Complete   | 2026-06-29 |
-| 5. Local AI (Ollama) | 2/4 | In Progress|  |
+| 5. Local AI (Ollama) | 3/4 | In Progress|  |
 | 6. RAG Pipeline | 0/TBD | Not started | - |
 | 7. CI/CD Hardening + Portfolio Readiness | 0/TBD | Not started | - |
