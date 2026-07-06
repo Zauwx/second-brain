@@ -4,13 +4,13 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Completed 05-01-PLAN.md
-last_updated: "2026-07-05T18:15:40.307Z"
-last_activity: 2026-07-05
+last_updated: "2026-07-06T12:39:29.041Z"
+last_activity: 2026-07-06
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 18
-  completed_plans: 15
+  completed_plans: 16
   percent: 57
 ---
 
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-06-23)
 ## Current Position
 
 Phase: 05 (local-ai-ollama) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
-Last activity: 2026-07-05
+Last activity: 2026-07-06
 
-Progress: [████████░░] 83%
+Progress: [█████████░] 89%
 
 ## Performance Metrics
 
@@ -66,6 +66,7 @@ Progress: [████████░░] 83%
 | Phase 04 P04 | 20 | 2 tasks | 10 files |
 | Phase 04 P05 | 10 | 1 tasks | 1 files |
 | Phase 05 P01 | 12 | 3 tasks | 5 files |
+| Phase 05 P02 | 56min | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -96,6 +97,8 @@ Recent decisions affecting current work:
 - [Phase 04 Plan 01]: NoteRepository.create/update use get_by_id re-fetch after commit — session.refresh() exposes MissingGreenlet on Note.tags in async context
 - [Phase ?]: [Phase 05 Plan 01]: ollama Compose service uses top-level mem_limit: 4g (not deploy.resources) since plain docker compose up ignores the Swarm key (D-09)
 - [Phase ?]: [Phase 05 Plan 01]: ollama healthcheck is [CMD, ollama, list] not curl — the ollama/ollama image ships no curl binary
+- [Phase ?]: [Phase 05 Plan 02]: get_llm_provider is a plain sync function (no async needed for OllamaProvider construction), matching RESEARCH.md's Dependency wiring example verbatim
+- [Phase ?]: [Phase 05 Plan 02]: ai_client fixture deletes only the get_llm_provider override key on teardown (not a blanket clear()) since it runs before the underlying client fixture's own clear() in reverse-dependency teardown order
 
 ### Pending Todos
 
@@ -114,6 +117,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-07-05T18:15:40.298Z
+Last session: 2026-07-06T12:02:18.519Z
 Stopped at: Completed 05-01-PLAN.md
 Resume file: None
