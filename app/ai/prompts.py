@@ -33,3 +33,21 @@ def build_summarize_prompt(content: str) -> str:
         f"{safe_content}\n"
         "--- NOTE CONTENT END ---"
     )
+
+
+def build_tag_prompt(content: str) -> str:
+    """Build the prompt instructing a JSON list of short tag strings (D-05).
+
+    Output is untrusted model text — the caller must run it through
+    `_parse_tag_list` before use (never eval'd, never trusted as-is).
+    """
+    safe_content = _truncate(content)
+    return (
+        "You are a tagging assistant. Suggest 3-5 short, lowercase tags for "
+        "the note content below. Respond with ONLY a JSON list of strings, "
+        'like ["tag-one", "tag-two"] — no preamble, no explanation, no other '
+        "keys or text.\n\n"
+        "--- NOTE CONTENT START ---\n"
+        f"{safe_content}\n"
+        "--- NOTE CONTENT END ---"
+    )

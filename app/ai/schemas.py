@@ -13,3 +13,15 @@ class SummarizeRequest(BaseModel):
     """Request body for POST /ai/summarize — the caller's own note id."""
 
     note_id: int
+
+
+class SuggestTagsRequest(BaseModel):
+    """Request body for POST /ai/suggest-tags — the caller's own note id."""
+
+    note_id: int
+
+
+class SuggestTagsResponse(BaseModel):
+    """Response body for POST /ai/suggest-tags — suggest-only, never persisted/attached (D-04)."""
+
+    tags: list[str]
