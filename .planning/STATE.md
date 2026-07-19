@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: "Phase 04 shipped — PR #2"
-stopped_at: Session resumed — Phase 04 complete/reviewed, proceeding to ship Phase 04 branch to master
-last_updated: "2026-07-04T08:11:13.320Z"
-last_activity: 2026-07-04
+status: executing
+stopped_at: Completed 05-03-PLAN.md
+last_updated: "2026-07-19T23:38:14.407Z"
+last_activity: "2026-07-19 - Completed quick task 260719-snb: alembic assets + venv PATH into api image"
 progress:
   total_phases: 7
-  completed_phases: 4
-  total_plans: 14
-  completed_plans: 14
-  percent: 57
+  completed_phases: 5
+  total_plans: 18
+  completed_plans: 18
+  percent: 71
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-23)
 
 **Core value:** User can save content and retrieve / query their knowledge in natural language (RAG)
-**Current focus:** Phase 5 — local ai (ollama)
+**Current focus:** Phase 05 — local-ai-ollama
 
 ## Current Position
 
-Phase: 5
-Plan: Not started
-Status: Phase 04 shipped — PR #2
-Last activity: 2026-07-04
+Phase: 05 (local-ai-ollama) — SHIPPED, awaiting merge
+Plan: 4 of 4
+Status: Phase 05 shipped — PR #3 (https://github.com/Zauwx/second-brain/pull/3), verification passed 5/5
+Last activity: 2026-07-20 - Shipped Phase 05 as PR #3 against master
 
-Progress: [██████████] 100%
+Progress: [█████████░] 94%
 
 ## Performance Metrics
 
@@ -65,6 +65,9 @@ Progress: [██████████] 100%
 | Phase 04 P03 | 20 | 3 tasks | 11 files |
 | Phase 04 P04 | 20 | 2 tasks | 10 files |
 | Phase 04 P05 | 10 | 1 tasks | 1 files |
+| Phase 05 P01 | 12 | 3 tasks | 5 files |
+| Phase 05 P02 | 56min | 3 tasks | 9 files |
+| Phase 05 P03 | 6min | 3 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -93,6 +96,15 @@ Recent decisions affecting current work:
 - [Phase ?]: Service layer translates repository ValueError to HTTPException 422 to prevent 500 leaking internal errors (T-02-14)
 - [Phase 04 Plan 01]: Two migrations (0004 tags, 0005 collections) instead of one — keeps each vertical slice's migration self-contained
 - [Phase 04 Plan 01]: NoteRepository.create/update use get_by_id re-fetch after commit — session.refresh() exposes MissingGreenlet on Note.tags in async context
+- [Phase ?]: [Phase 05 Plan 01]: ollama Compose service uses top-level mem_limit: 4g (not deploy.resources) since plain docker compose up ignores the Swarm key (D-09)
+- [Phase ?]: [Phase 05 Plan 01]: ollama healthcheck is [CMD, ollama, list] not curl — the ollama/ollama image ships no curl binary
+- [Phase ?]: [Phase 05 Plan 02]: get_llm_provider is a plain sync function (no async needed for OllamaProvider construction), matching RESEARCH.md's Dependency wiring example verbatim
+- [Phase ?]: [Phase 05 Plan 02]: ai_client fixture deletes only the get_llm_provider override key on teardown (not a blanket clear()) since it runs before the underlying client fixture's own clear() in reverse-dependency teardown order
+- [Phase 05]: [Phase 05 Plan 03]: AIService reuses NoteService.get_or_404_owned; _safe_complete is the only place raising HTTPException(503), catching ConnectionError/TimeoutError/OSError/ollama.ResponseError
+- [Phase 05]: [Phase 05 Plan 03]: Summarize response reuses NoteRead instead of a bespoke SummarizeResponse schema
+- [Phase 05]: [Phase 05 Plan 03]: retry-then-succeed test fake implements its own internal tenacity retry mirroring OllamaProvider, since AIService calls provider.complete() exactly once per request
+- [Phase 05 Plan 04]: _parse_tag_list implemented verbatim from RESEARCH.md Pattern 4 (json.loads -> regex [...] fallback -> dict-unwrap -> coerce -> []); AIService.suggest_tags has no write path at all, structurally enforcing suggest-only D-04
+- [Quick 260720-1ng]: Fixed suggest-tags empty-list defect — replaced json_mode=True (format="json") with an explicit TAG_SCHEMA passed as format=; llama3.2:3b now emits {tags: [...]} which the existing lenient parser unwraps correctly. Live-verified: non-empty unprefixed tags, D-04 suggest-only preserved, summarize unaffected, 129/130 hermetic tests green (live test opt-in via `pytest -m live_ollama`). Phase 05 BLOCKING concern cleared.
 
 ### Pending Todos
 
@@ -100,7 +112,19 @@ None yet.
 
 ### Blockers/Concerns
 
-None yet.
+RESOLVED — `POST /ai/suggest-tags` empty-list defect, fixed and live-verified via quick task
+260720-1ng (see Decisions and Quick Tasks Completed below). Phase 05 sign-off is unblocked.
+
+- 05-04 live checkpoint results: step 1 ✓ stack up; step 2 ✓ llama3.2:3b pulled; step 3 ✓ /health ok; step 4 ✓ summarize 13s, accurate 3-sentence summary, persisted (criterion 2); step 5 ✗→✓ suggest-tags empty (criterion 3) — fixed by 260720-1ng; step 6 ✓ ollama peak 2.479GiB/4GiB (criterion 4); step 7 ✓ clean 503 + notes CRUD unaffected + /health "unreachable" (D-07); step 8 ✓ 128 passed (criterion 5).
+- `/health` reports `"ollama": "ok"` when zero models are pulled — it tracks reachability honestly (correctly showed "unreachable" when ollama was stopped) but not model availability, so it can read green while every AI endpoint fails with "model not found". Discovered during the 05-04 live checkpoint. Not yet triaged.
+- 05-04-PLAN.md Task 3 checkpoint steps omit any `alembic upgrade head` step, going from `compose up` straight to registering a user — that sequence cannot work on a fresh volume. Plan text needs correcting.
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260719-snb | fix: COPY alembic.ini + alembic/ into api image so migrations can run in-container | 2026-07-19 | 29d4b73 | [260719-snb-fix-copy-alembic-ini-alembic-into-api-im](./quick/260719-snb-fix-copy-alembic-ini-alembic-into-api-im/) |
+| 260720-1ng | fix: suggest-tags returns empty list — replace format="json" with an explicit TAG_SCHEMA | 2026-07-20 | 6a420e4 | [260720-1ng-fix-suggest-tags-returns-empty-list-repl](./quick/260720-1ng-fix-suggest-tags-returns-empty-list-repl/) |
 
 ## Deferred Items
 
@@ -111,6 +135,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-07-04
-Stopped at: Session resumed — Phase 04 complete/reviewed, proceeding to ship Phase 04 branch to master
+Last session: 2026-07-19T23:38:14.399Z
+Stopped at: Completed quick task 260720-1ng: fix suggest-tags empty-list defect
 Resume file: None

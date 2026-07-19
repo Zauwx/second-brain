@@ -27,7 +27,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from testcontainers.mysql import MySqlContainer
 
-from app.core.dependencies import get_db
+from app.core.dependencies import get_db, get_llm_provider
 from app.main import app
 
 # ---------------------------------------------------------------------------
@@ -124,6 +124,47 @@ async def client(session: AsyncSession) -> AsyncClient:
         yield ac
 
     app.dependency_overrides.clear()
+
+
+# ---------------------------------------------------------------------------
+# AI fixtures — hand-rolled FakeLLMProvider, zero real Ollama calls (D-10)
+# ---------------------------------------------------------------------------
+
+
+class FakeLLMProvider:
+    """Deterministic LLMProvider stand-in — zero network calls (D-10, criterion 5)."""
+
+    def __init__(self, response: str = '["python", "docker"]', should_fail: bool = False) -> None:
+        self.response = response
+        self.should_fail = should_fail
+        self.calls: list[tuple[str, str | dict]] = []
+
+    async def complete(self, prompt: str, *, format: str | dict = "") -> str:
+        self.calls.append((prompt, format))
+        if self.should_fail:
+            raise ConnectionError("mock: ollama unreachable")
+        return self.response
+
+
+@pytest.fixture
+def fake_llm_provider() -> FakeLLMProvider:
+    return FakeLLMProvider()
+
+
+@pytest_asyncio.fixture
+async def ai_client(
+    client: httpx.AsyncClient, fake_llm_provider: FakeLLMProvider
+) -> AsyncClient:
+    """AsyncClient with the real LLMProvider replaced by the deterministic fake.
+
+    Layers on top of the `client` fixture: sets the get_llm_provider override,
+    yields, then deletes ONLY that override key on teardown — `client` already
+    owns get_db and clears the whole dict on its own teardown, so this must
+    not clear indiscriminately (would race with client's teardown ordering).
+    """
+    app.dependency_overrides[get_llm_provider] = lambda: fake_llm_provider
+    yield client
+    del app.dependency_overrides[get_llm_provider]
 
 
 # ---------------------------------------------------------------------------

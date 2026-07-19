@@ -25,6 +25,9 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jwt.exceptions import ExpiredSignatureError, InvalidTokenError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.ai.providers.ollama import OllamaProvider
+from app.ai.providers.protocol import LLMProvider
+from app.ai.service import AIService
 from app.auth.models import User
 from app.auth.repository import AuthRepository
 from app.collections.repository import CollectionRepository
@@ -79,6 +82,33 @@ async def get_search_service(
 ) -> SearchService:
     """Construct SearchService with its repository for the current request."""
     return SearchService(SearchRepository(db))
+
+
+def get_llm_provider() -> LLMProvider:
+    """Construct the OllamaProvider from settings.
+
+    This is the seam tests override via app.dependency_overrides (D-10) —
+    zero real Ollama calls happen in pytest because this function is never
+    invoked; a fake LLMProvider is substituted instead.
+    """
+    return OllamaProvider(
+        base_url=settings.ollama_base_url,
+        model=settings.ollama_chat_model,
+        timeout=settings.ollama_timeout_seconds,
+    )
+
+
+async def get_ai_service(
+    db: AsyncSession = Depends(get_db),
+    provider: LLMProvider = Depends(get_llm_provider),
+) -> AIService:
+    """Construct AIService with its collaborators for the current request.
+
+    Reuses the real NoteService (not a duplicated ownership check) — see
+    AIService.summarize / NoteService.get_or_404_owned (T-05-03).
+    """
+    note_repo = NoteRepository(db)
+    return AIService(provider, NoteService(note_repo), note_repo)
 
 
 async def get_current_user(

@@ -34,8 +34,8 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Local AI (Ollama)
 
-- [ ] **AIL-01**: User can generate an automatic summary of a note via a local LLM
-- [ ] **AIL-02**: User can get automatically suggested tags for a note via a local LLM
+- [x] **AIL-01**: User can generate an automatic summary of a note via a local LLM
+- [x] **AIL-02**: User can get automatically suggested tags for a note via a local LLM
 
 ### Cloud AI / RAG
 
@@ -107,8 +107,8 @@ Which phases cover which requirements. Populated during roadmap creation.
 | ORG-03 | Phase 4 | Complete |
 | ORG-04 | Phase 4 | Complete |
 | SRCH-01 | Phase 4 | Complete |
-| AIL-01 | Phase 5 | Pending |
-| AIL-02 | Phase 5 | Pending |
+| AIL-01 | Phase 5 | Complete |
+| AIL-02 | Phase 5 | Complete |
 | RAG-01 | Phase 6 | Pending |
 | RAG-02 | Phase 6 | Pending |
 | OPS-02 | Phase 7 | Pending |

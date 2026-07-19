@@ -185,3 +185,17 @@ class NoteRepository:
         """Delete the given Note from the database."""
         await self._session.delete(note)
         await self._session.commit()
+
+    async def set_summary(self, note: Note, summary: str) -> Note:
+        """Persist an AI-generated summary on the note (D-02).
+
+        Separate from `update()` because NoteUpdate (client-facing schema) has
+        validation rules (e.g. content min_length=1, no explicit-null content)
+        that don't apply to this server-side-only write.
+        """
+        note.summary = summary
+        await self._session.commit()
+        # Re-fetch via get_by_id so selectinload(Note.tags) is applied.
+        updated = await self.get_by_id(note.id)
+        assert updated is not None  # we just committed it
+        return updated

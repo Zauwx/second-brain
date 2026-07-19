@@ -16,6 +16,9 @@ Column notes:
 - `source_url` VARCHAR(2048) — nullable; URL of the original article/page
 - `user_id`    INTEGER UNSIGNED — NOT NULL FK → users.id; owner of the note
 - `created_at` / `updated_at` — managed by the DB (DEFAULT / ON UPDATE CURRENT_TIMESTAMP)
+
+Phase 5 additions:
+- `summary` TEXT — nullable; AI-generated summary populated by POST /ai/summarize (D-02)
 """
 
 from __future__ import annotations
@@ -104,6 +107,11 @@ class Note(Base):
     )
     source_url: Mapped[str | None] = mapped_column(
         String(2048), nullable=True, comment="URL of the original source"
+    )
+    summary: Mapped[str | None] = mapped_column(
+        Text(length=65535),  # TEXT — generous for a 2-3 sentence LLM summary
+        nullable=True,
+        comment="AI-generated summary (Phase 5, D-02) — null until /ai/summarize is called",
     )
     user_id: Mapped[int] = mapped_column(
         INTEGER(unsigned=True),

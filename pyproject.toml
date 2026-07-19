@@ -13,6 +13,8 @@ dependencies = [
     "pyjwt>=2.13.0",
     "pwdlib[argon2]>=0.3.0",
     "pydantic[email]>=2.13.4",
+    "ollama>=0.6.2",
+    "tenacity>=9.1.4",
 ]
 
 [dependency-groups]
@@ -66,3 +68,7 @@ strict_equality = true
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+markers = [
+    "live_ollama: requires a running Ollama stack (docker compose up); excluded by default (D-10)",
+]
+addopts = "-m 'not live_ollama'"

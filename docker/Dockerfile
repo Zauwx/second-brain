@@ -25,9 +25,25 @@ COPY pyproject.toml uv.lock ./
 # --no-dev excludes ruff/mypy/pytest/httpx from the production image
 RUN uv sync --frozen --no-dev
 
+# Put the uv-managed virtualenv's bin dir first on PATH.
+# `uv sync` installs console scripts (e.g. alembic) into /app/.venv/bin. The CMD below
+# still runs via `uv run`, which activates the venv on its own and is unaffected by this.
+# But `docker compose exec api alembic ...` does NOT go through `uv run`, so without this
+# the alembic entry point is unreachable ("executable file not found") even after the
+# alembic.ini/alembic/ assets below are copied in.
+ENV PATH="/app/.venv/bin:$PATH"
+
 # Copy application source code
 # .dockerignore excludes .env, .venv/, .git/, caches, and planning files
 COPY app/ ./app/
+
+# Copy Alembic config + migration environment (env.py, script.py.mako, versions/).
+# Required for `alembic upgrade head` to run inside the container. `alembic` itself is
+# already installed above since it's a main dependency (not a dev dependency), so no
+# separate install step is needed. Placed after the uv sync layer so adding a migration
+# doesn't invalidate the expensive dependency-install cache layer.
+COPY alembic.ini ./alembic.ini
+COPY alembic/ ./alembic/
 
 # Expose the port uvicorn listens on
 EXPOSE 8000

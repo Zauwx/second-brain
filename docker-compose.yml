@@ -58,6 +58,35 @@ services:
     restart: unless-stopped
 
   # ---------------------------------------------------------------------------
+  # Ollama — local LLM runtime (Phase 5)
+  # Internal Docker network only (NO host port mapping — threat T-05-01).
+  # Memory-bounded via the top-level `mem_limit` key (NOT deploy.resources,
+  # which plain `docker compose up` silently ignores — RESEARCH Pitfall 3, D-09).
+  # Healthcheck uses `ollama list` because the image ships no curl (Pitfall 2).
+  # One-time model pull after first `up` (fresh volume has no models):
+  #   docker compose exec ollama ollama pull llama3.2:3b
+  # ---------------------------------------------------------------------------
+  ollama:
+    image: ollama/ollama:0.31.1
+    environment:
+      # Cap concurrent model loads so overlapping requests can't compound
+      # memory pressure and OOM-kill the container (Pitfall 6).
+      OLLAMA_NUM_PARALLEL: "1"
+      OLLAMA_MAX_LOADED_MODELS: "1"
+    volumes:
+      - ollama_data:/root/.ollama
+    mem_limit: 4g
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    networks:
+      - backend
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
   # FastAPI API — the main application
   # Port 8000 is the only port exposed to the host.
   # ---------------------------------------------------------------------------
@@ -72,6 +101,8 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+      ollama:
+        condition: service_healthy
     networks:
       - backend
     restart: unless-stopped
@@ -82,6 +113,7 @@ services:
 # ---------------------------------------------------------------------------
 volumes:
   mysql_data:
+  ollama_data:
 
 # ---------------------------------------------------------------------------
 # Networks — internal Docker bridge network.
