@@ -82,16 +82,29 @@ async def test_engine(test_database_url: str, run_migrations: None):
 async def session(test_engine) -> AsyncSession:
     """Per-test AsyncSession with transaction rollback for isolation (D-18).
 
-    Opens a connection + outer transaction, binds a session to it, yields the
-    session to the test, then rolls back — leaving the DB pristine for the next
+    Opens a connection + outer transaction, binds a session to it with
+    ``join_transaction_mode="create_savepoint"``, yields the session to the test,
+    then rolls back the outer transaction — leaving the DB pristine for the next
     test without touching the real MySQL container data.
+
+    The ``create_savepoint`` join mode is the SQLAlchemy-recommended test-suite
+    pattern: any ``session.commit()`` issued by the app under test (e.g.
+    NoteRepository.create or TagRepository.attach/detach — CR-01) releases a
+    SAVEPOINT instead of committing the outer transaction, so the test stays
+    isolated AND the application's real commit path is exercised. Without this,
+    a route that commits would either break isolation or be indistinguishable
+    from a flush.
     """
     async with test_engine.connect() as conn:
-        await conn.begin()
-        session_factory = async_sessionmaker(bind=conn, expire_on_commit=False)
+        trans = await conn.begin()
+        session_factory = async_sessionmaker(
+            bind=conn,
+            expire_on_commit=False,
+            join_transaction_mode="create_savepoint",
+        )
         async with session_factory() as sess:
             yield sess
-        await conn.rollback()
+        await trans.rollback()
 
 
 @pytest_asyncio.fixture
@@ -239,6 +252,66 @@ async def ft_auth_client(ft_client: httpx.AsyncClient) -> httpx.AsyncClient:
     token = resp.json()["access_token"]
     ft_client.headers["Authorization"] = f"Bearer {token}"
     return ft_client
+
+
+@pytest_asyncio.fixture
+async def ft_user_a_client(ft_session: AsyncSession) -> AsyncClient:
+    """Authenticated client for user A on a COMMITTED session (WR-03).
+
+    For search-isolation tests: InnoDB FULLTEXT only indexes COMMITTED rows, so
+    user A's note is actually indexed and SearchRepository's `Note.user_id`
+    scoping is genuinely exercised — unlike the rollback `session` fixture, where
+    the row is never indexed and `total == 0` is trivially true regardless of the
+    scoping clause. Shares the same `ft_session` as `ft_user_b_client` so both
+    users' data lives on one committed session, cleaned up by ft_session teardown.
+    """
+
+    async def override_get_db() -> AsyncSession:  # type: ignore[misc]
+        yield ft_session
+
+    app.dependency_overrides[get_db] = override_get_db
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        reg = await ac.post(
+            "/auth/register",
+            json={"email": "fta@example.com", "password": "Test1234!"},
+        )
+        assert reg.status_code == 201, f"ft user A register failed: {reg.json()}"
+        login = await ac.post(
+            "/auth/login",
+            json={"email": "fta@example.com", "password": "Test1234!"},
+        )
+        assert login.status_code == 200, f"ft user A login failed: {login.json()}"
+        ac.headers["Authorization"] = f"Bearer {login.json()['access_token']}"
+        yield ac
+    app.dependency_overrides.clear()
+
+
+@pytest_asyncio.fixture
+async def ft_user_b_client(ft_session: AsyncSession) -> AsyncClient:
+    """Authenticated client for user B on the SAME committed session (WR-03).
+
+    Pairs with `ft_user_a_client` to prove search isolation against committed,
+    FULLTEXT-indexed data.
+    """
+
+    async def override_get_db() -> AsyncSession:  # type: ignore[misc]
+        yield ft_session
+
+    app.dependency_overrides[get_db] = override_get_db
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        reg = await ac.post(
+            "/auth/register",
+            json={"email": "ftb@example.com", "password": "Test1234!"},
+        )
+        assert reg.status_code == 201, f"ft user B register failed: {reg.json()}"
+        login = await ac.post(
+            "/auth/login",
+            json={"email": "ftb@example.com", "password": "Test1234!"},
+        )
+        assert login.status_code == 200, f"ft user B login failed: {login.json()}"
+        ac.headers["Authorization"] = f"Bearer {login.json()['access_token']}"
+        yield ac
+    app.dependency_overrides.clear()
 
 
 @pytest_asyncio.fixture

@@ -36,10 +36,12 @@ if TYPE_CHECKING:
 
 
 # ---------------------------------------------------------------------------
-# Association table: note_tags (many-to-many: Note ↔ Tag)
-# Defined at module level as a Core Table object (not an ORM class) so it can
-# be used as the `secondary` argument in the relationship below.
-# String FK refs ("tags.id") defer resolution to mapper-configure time — no
+# Association tables (many-to-many):
+#   - note_collections (Note ↔ Collection) — defined immediately below
+#   - note_tags        (Note ↔ Tag)        — defined after it
+# Both are module-level Core Table objects (not ORM classes) so they can be used
+# as the `secondary` argument in the relationships below. String FK refs
+# ("tags.id", "collections.id") defer resolution to mapper-configure time — no
 # circular import at module load.
 # ---------------------------------------------------------------------------
 note_collections = Table(

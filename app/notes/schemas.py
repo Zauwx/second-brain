@@ -13,7 +13,7 @@ Phase note: no `user_id` field here — added in Phase 3 when auth is introduced
 
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.tags.schemas import TagRead
 
@@ -51,13 +51,28 @@ class NoteUpdate(BaseModel):
     content: str | None = Field(
         default=None,
         min_length=1,
-        description="New content",
+        description="New content (cannot be cleared — explicit null is rejected)",
     )
     source_url: str | None = Field(
         default=None,
         max_length=2048,
         description="New source URL (set to null to clear)",
     )
+
+    @field_validator("content")
+    @classmethod
+    def _content_not_null(cls, v: str | None) -> str | None:
+        """Reject an explicit ``{"content": null}`` (WR-02).
+
+        ``content`` maps to a NOT NULL column. ``model_dump(exclude_unset=True)``
+        includes an explicitly-sent null, so without this guard ``setattr`` would
+        push None to the column and the commit would raise IntegrityError → 500.
+        Omitting ``content`` entirely is still fine — the validator does not run
+        for unset fields, so partial updates that leave content untouched work.
+        """
+        if v is None:
+            raise ValueError("content cannot be set to null")
+        return v
 
 
 class NoteRead(BaseModel):
@@ -87,7 +102,3 @@ class NoteListResponse(BaseModel):
     page: int = Field(description="Current page number (1-indexed)")
     size: int = Field(description="Number of items per page")
     pages: int = Field(description="Total number of pages")
-
-
-# Deprecated alias — kept for backward compatibility during transition.
-PaginatedNotes = NoteListResponse

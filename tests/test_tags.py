@@ -13,6 +13,46 @@ These tests are written BEFORE the implementation exists (TDD RED phase).
 """
 
 import httpx
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import async_sessionmaker
+
+
+async def test_attach_tag_persists_across_sessions(
+    ft_auth_client: httpx.AsyncClient,
+    test_engine,
+) -> None:
+    """CR-01 regression: an attached tag is COMMITTED and survives in a NEW session.
+
+    This is the multi-request guarantee. The attach is performed via the committed
+    (ft_*) session, then the note_tags / tags rows are re-read through a brand-new
+    independent session opened directly on the engine. If TagRepository.attach only
+    flushed (the CR-01 bug), the INSERTs would be rolled back on request teardown
+    and the fresh session would see no tag — failing this test. A bare rollback
+    fixture cannot catch this regression, which is why it runs on committed data.
+    """
+    create = await ft_auth_client.post("/notes/", json={"content": "persisted tag note"})
+    assert create.status_code == 201
+    note_id = create.json()["id"]
+
+    attach = await ft_auth_client.post(f"/notes/{note_id}/tags", json={"name": "persisted"})
+    assert attach.status_code == 200
+
+    # Re-read via a brand-new session — proves the write was committed, not just flushed.
+    fresh_factory = async_sessionmaker(test_engine, expire_on_commit=False)
+    async with fresh_factory() as fresh:
+        rows = (
+            await fresh.execute(
+                text(
+                    "SELECT t.name FROM tags t "
+                    "JOIN note_tags nt ON nt.tag_id = t.id "
+                    "WHERE nt.note_id = :nid"
+                ),
+                {"nid": note_id},
+            )
+        ).scalars().all()
+    assert "persisted" in rows, (
+        f"Attached tag must persist across sessions (CR-01), got: {rows}"
+    )
 
 
 async def test_attach_tag_returns_200_with_tags_array(auth_client: httpx.AsyncClient) -> None:

@@ -13,14 +13,24 @@ from app.search.repository import SearchRepository
 def sanitize_boolean_query(q: str) -> str | None:
     """Sanitize user input for MATCH ... AGAINST ... IN BOOLEAN MODE.
 
-    InnoDB BOOLEAN MODE raises errors for certain operator combinations
-    (dev.mysql.com/doc/refman/8.4/en/fulltext-boolean.html).  This function
-    strips the problematic patterns so the caller never receives a 500:
+    InnoDB BOOLEAN MODE raises errors for several special characters
+    (dev.mysql.com/doc/refman/8.4/en/fulltext-boolean.html).  Beyond `+ - @`,
+    an unbalanced phrase quote (`"`), grouping paren (`(` `)`), rank-negation
+    (`~`), contribution operators (`<` `>`), or a lone truncation `*` all raise
+    an InnoDB syntax error that would otherwise surface as a 500 (WR-01).
+
+    Strategy: whitelist. Keep only word characters, whitespace, and the operators
+    we actually support (`+ - *`); replace everything else with a space. Then
+    clean up operator sequences so the result is always a valid BOOLEAN MODE
+    expression:
 
     - Strips leading/trailing whitespace; returns None if empty (skip DB call).
-    - Removes `@` (reserved for unsupported @distance proximity operator).
+    - Drops any character outside [word chars, whitespace, + - *] — this removes
+      `" ( ) ~ < > @` and any other punctuation that can trigger a parse error.
     - Removes consecutive operator sequences (++, +-, -+, --).
-    - Removes trailing operators attached to a token (word+ → word).
+    - Removes trailing operators attached to a token (word+ → word; word* kept).
+    - Removes a standalone/leading `*` (truncation operator with no preceding
+      token is a syntax error).
     - Collapses internal whitespace.
 
     Returns:
@@ -31,12 +41,16 @@ def sanitize_boolean_query(q: str) -> str | None:
     q = q.strip()
     if not q:
         return None
-    # Remove @ (reserved for @distance proximity, unsupported this phase)
-    q = q.replace("@", " ")
+    # Whitelist: keep word chars (incl. unicode for utf8mb4), whitespace, and the
+    # supported boolean operators (+ - *). Everything else — " ( ) ~ < > @ etc. —
+    # becomes a space so an unbalanced quote/paren can never reach InnoDB.
+    q = re.sub(r"[^\w\s+\-*]", " ", q, flags=re.UNICODE)
     # Remove consecutive operators: ++, +-, -+, --
     q = re.sub(r"[+\-]{2,}", "", q)
-    # Remove trailing operators attached to a word token
-    q = re.sub(r"([a-zA-Z0-9*])[+\-]+(?=\s|$)", r"\1", q)
+    # Remove trailing +/- operators attached to a word token (word+ → word)
+    q = re.sub(r"(\w|\*)[+\-]+(?=\s|$)", r"\1", q)
+    # Remove a leading/standalone '*' (truncation needs a preceding token)
+    q = re.sub(r"(^|\s)\*+", r"\1", q)
     # Collapse whitespace
     q = re.sub(r"\s+", " ", q).strip()
     return q or None

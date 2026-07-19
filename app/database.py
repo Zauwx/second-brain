@@ -11,10 +11,7 @@ Design notes:
 - DSN is read lazily from Settings so tests can override via dependency injection.
 """
 
-from collections.abc import AsyncGenerator  # noqa: F401 — re-exported for downstream use
-
 from sqlalchemy.ext.asyncio import (
-    AsyncSession,
     async_sessionmaker,
     create_async_engine,
 )
@@ -54,14 +51,7 @@ AsyncSessionLocal = async_sessionmaker(
     autoflush=False,
 )
 
-
-async def get_db() -> AsyncGenerator[AsyncSession, None]:
-    """FastAPI dependency: yields an AsyncSession and ensures clean teardown.
-
-    Usage in a router:
-        @router.get("/resource")
-        async def endpoint(db: AsyncSession = Depends(get_db)):
-            ...
-    """
-    async with AsyncSessionLocal() as session:
-        yield session
+# NOTE: the FastAPI request dependency `get_db` lives in app/core/dependencies.py
+# (the single canonical definition imported by every router). It builds its
+# session from AsyncSessionLocal above. A duplicate copy previously lived here
+# but was unused and invited drift — removed (IN-02).

@@ -85,18 +85,32 @@ async def test_two_char_token_search(ft_auth_client: httpx.AsyncClient) -> None:
 
 
 async def test_search_isolation(
-    user_a_client: httpx.AsyncClient,
-    user_b_client: httpx.AsyncClient,
+    ft_user_a_client: httpx.AsyncClient,
+    ft_user_b_client: httpx.AsyncClient,
 ) -> None:
-    """Search never returns another user's notes — user B cannot find user A's content."""
-    # User A creates a note with a rare keyword
-    r = await user_a_client.post(
-        "/notes/", json={"content": "private xk9qlm2 secret content for isolation test"}
+    """Search never returns another user's notes — proven on COMMITTED, indexed data.
+
+    WR-03: runs on committed sessions so user A's note is actually FULLTEXT-indexed.
+    A positive control asserts A CAN find the term (the row is indexed); B then gets
+    total == 0, which genuinely exercises the `Note.user_id` scoping in
+    SearchRepository.search_fulltext rather than being trivially empty.
+    """
+    term = "xk9qlm2"
+    r = await ft_user_a_client.post(
+        "/notes/", json={"content": f"private {term} secret content for isolation test"}
     )
     assert r.status_code == 201
 
-    # User B searches for the same keyword — must return total == 0
-    response = await user_b_client.get("/search/", params={"q": "xk9qlm2"})
+    # Positive control: A CAN find the committed (indexed) note.
+    a_resp = await ft_user_a_client.get("/search/", params={"q": term})
+    assert a_resp.status_code == 200
+    assert a_resp.json()["total"] >= 1, (
+        "A's own committed note must be FULLTEXT-indexed and findable — "
+        "otherwise the isolation assertion below would be trivially true"
+    )
+
+    # Isolation: B searching the same indexed term must get nothing.
+    response = await ft_user_b_client.get("/search/", params={"q": term})
     assert response.status_code == 200
     data = response.json()
     assert data["total"] == 0
@@ -144,6 +158,44 @@ async def test_mixed_stray_operators_returns_200(
 ) -> None:
     """@@++ (multiple stray operators) are sanitized — returns 200, not 500."""
     response = await auth_client.get("/search/", params={"q": "@@++"})
+    assert response.status_code == 200
+
+
+async def test_unbalanced_phrase_quote_returns_200(auth_client: httpx.AsyncClient) -> None:
+    """A lone double-quote (unterminated phrase) is sanitized — 200, not 500 (WR-01)."""
+    response = await auth_client.get("/search/", params={"q": '"'})
+    assert response.status_code == 200
+
+
+async def test_unbalanced_open_paren_returns_200(auth_client: httpx.AsyncClient) -> None:
+    """A lone '(' (unbalanced grouping) is sanitized — 200, not 500 (WR-01)."""
+    response = await auth_client.get("/search/", params={"q": "("})
+    assert response.status_code == 200
+
+
+async def test_unbalanced_close_paren_returns_200(auth_client: httpx.AsyncClient) -> None:
+    """A lone ')' (unbalanced grouping) is sanitized — 200, not 500 (WR-01)."""
+    response = await auth_client.get("/search/", params={"q": ")"})
+    assert response.status_code == 200
+
+
+async def test_rank_and_contribution_operators_return_200(
+    auth_client: httpx.AsyncClient,
+) -> None:
+    """Stray ~ < > operators are sanitized — 200, not 500 (WR-01)."""
+    response = await auth_client.get("/search/", params={"q": "~test <foo >bar"})
+    assert response.status_code == 200
+
+
+async def test_lone_wildcard_returns_200(auth_client: httpx.AsyncClient) -> None:
+    """A standalone '*' (truncation with no token) is sanitized — 200, not 500 (WR-01)."""
+    response = await auth_client.get("/search/", params={"q": "*"})
+    assert response.status_code == 200
+
+
+async def test_phrase_and_group_chars_return_200(auth_client: httpx.AsyncClient) -> None:
+    """A query mixing quotes and parens around a term returns 200 (WR-01)."""
+    response = await auth_client.get("/search/", params={"q": '"hello (world)"'})
     assert response.status_code == 200
 
 
