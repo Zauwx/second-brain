@@ -27,8 +27,8 @@ See: .planning/PROJECT.md (updated 2026-06-23)
 
 Phase: 05 (local-ai-ollama) — EXECUTING
 Plan: 4 of 4
-Status: Ready to execute
-Last activity: 2026-07-06
+Status: Live checkpoint in progress (steps 1-3 pass, resuming at step 4)
+Last activity: 2026-07-19 - Completed quick task 260719-snb: alembic assets + venv PATH into api image
 
 Progress: [█████████░] 94%
 
@@ -113,7 +113,15 @@ None yet.
 
 yet.
 
-- 05-04 Task 3 (live end-to-end phase verification checkpoint) awaiting human execution — code (Tasks 1-2) complete and committed, full mocked suite green (128 passed). See 05-04-SUMMARY.md 'Pending Checkpoint' for exact commands.
+- 05-04 Task 3 (live end-to-end phase verification checkpoint) IN PROGRESS — steps 1-3 pass (stack up, llama3.2:3b pulled, /health ok). Blocked step 4+ on a Dockerfile defect, fixed by quick task 260719-snb. Resume at step 4 (summarize).
+- `/health` reports `"ollama": "ok"` when zero models are pulled — it proves reachability, not serviceability. Discovered during the 05-04 live checkpoint. Not yet triaged.
+- 05-04-PLAN.md Task 3 checkpoint steps omit any `alembic upgrade head` step, going from `compose up` straight to registering a user — that sequence cannot work on a fresh volume. Plan text needs correcting.
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260719-snb | fix: COPY alembic.ini + alembic/ into api image so migrations can run in-container | 2026-07-19 | 29d4b73 | [260719-snb-fix-copy-alembic-ini-alembic-into-api-im](./quick/260719-snb-fix-copy-alembic-ini-alembic-into-api-im/) |
 
 ## Deferred Items
 
