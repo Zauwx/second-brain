@@ -3,7 +3,7 @@
 Tests verify:
   - POST /ai/summarize persists a 2-3 sentence summary via the (mocked) LLM
     provider and surfaces it on GET /notes/{id} (D-01, D-02, D-03, criterion 2).
-  - Provider called exactly once with json_mode=False (summarize never needs
+  - Provider called exactly once with format="" (summarize never needs
     structured JSON output).
   - Ollama unreachable → 503; note CRUD is unaffected (D-07).
   - A transient failure that recovers within the bounded retry still succeeds
@@ -37,7 +37,7 @@ class _RetryThenSucceedProvider:
 
     def __init__(self, response: str) -> None:
         self.response = response
-        self.calls: list[tuple[str, bool]] = []
+        self.calls: list[tuple[str, str | dict]] = []
         self._attempts = 0
 
     @retry(
@@ -46,8 +46,8 @@ class _RetryThenSucceedProvider:
         wait=wait_fixed(0),
         reraise=True,
     )
-    async def complete(self, prompt: str, *, json_mode: bool = False) -> str:
-        self.calls.append((prompt, json_mode))
+    async def complete(self, prompt: str, *, format: str | dict = "") -> str:
+        self.calls.append((prompt, format))
         self._attempts += 1
         if self._attempts == 1:
             raise ConnectionError("mock: transient ollama blip")
@@ -70,7 +70,7 @@ async def test_summarize_persists_and_uses_mock_only(
     assert resp.status_code == 200
 
     assert len(fake_llm_provider.calls) == 1
-    assert fake_llm_provider.calls[0][1] is False  # json_mode=False for summarize
+    assert fake_llm_provider.calls[0][1] == ""  # no format for summarize
 
     fetched = await ai_client.get(f"/notes/{note_id}")
     assert fetched.status_code == 200

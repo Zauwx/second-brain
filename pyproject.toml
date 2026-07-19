@@ -68,3 +68,7 @@ strict_equality = true
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+markers = [
+    "live_ollama: requires a running Ollama stack (docker compose up); excluded by default (D-10)",
+]
+addopts = "-m 'not live_ollama'"

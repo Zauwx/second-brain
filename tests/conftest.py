@@ -137,10 +137,10 @@ class FakeLLMProvider:
     def __init__(self, response: str = '["python", "docker"]', should_fail: bool = False) -> None:
         self.response = response
         self.should_fail = should_fail
-        self.calls: list[tuple[str, bool]] = []
+        self.calls: list[tuple[str, str | dict]] = []
 
-    async def complete(self, prompt: str, *, json_mode: bool = False) -> str:
-        self.calls.append((prompt, json_mode))
+    async def complete(self, prompt: str, *, format: str | dict = "") -> str:
+        self.calls.append((prompt, format))
         if self.should_fail:
             raise ConnectionError("mock: ollama unreachable")
         return self.response
