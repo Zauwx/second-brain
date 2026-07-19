@@ -17,13 +17,14 @@
 
 - Save notes, articles, and links — full CRUD with pagination and sorting
 - Organize with **tags** (many-to-many) and filter notes by tag (AND-intersection)
-- Group notes into **collections** *(Phase 4, in progress)*
-- Keyword **full-text search** over titles and content via MySQL FULLTEXT *(Phase 4, in progress)*
+- Group notes into **collections**
+- Keyword **full-text search** over titles and content via MySQL FULLTEXT
 - Multi-user with **JWT auth** (access + refresh tokens) and full **per-user data isolation**
+- Auto-generate **summaries** from a local LLM (Ollama), persisted on the note *(Phase 5)*
+- Suggest **tags** for a note via local LLM — suggest-only, never auto-attached *(Phase 5, in progress)*
 - Ask questions in natural language, grounded in your own notes (RAG via Anthropic Claude) *(Phase 6)*
-- Auto-generate summaries and suggested tags via a local LLM (Ollama) *(Phase 5)*
 
-> **Status:** Phases 1–3 are complete — repo foundation, async MySQL + Notes CRUD API, and JWT auth with per-user data isolation. **Phase 4 (tags, collections, full-text search) is in progress.** AI features (Ollama, RAG) land in Phases 5–6. See [Project Status](#project-status).
+> **Status:** Phases 1–4 are complete — repo foundation, async MySQL + Notes CRUD API, JWT auth with per-user data isolation, and tags/collections/full-text search. **Phase 5 (local AI via Ollama) is in progress:** summarization works end-to-end against a real local model; tag suggestion is implemented with a fix in flight. RAG lands in Phase 6. See [Project Status](#project-status).
 
 ---
 
@@ -71,7 +72,7 @@ Anthropic and Ollama variables are only needed from Phase 5 onward.
 docker compose up -d --build
 ```
 
-This starts two containers on an internal network: **api** (FastAPI, exposed on port 8000) and **mysql** (MySQL 8.4, internal only). The API waits for MySQL to pass its healthcheck.
+This starts three containers on an internal network: **api** (FastAPI, exposed on port 8000), **mysql** (MySQL 8.4, internal only), and **ollama** (local LLM runtime, internal only). The API waits for MySQL to pass its healthcheck.
 
 ### 3. Run database migrations
 
@@ -79,15 +80,26 @@ This starts two containers on an internal network: **api** (FastAPI, exposed on 
 docker compose exec api alembic upgrade head
 ```
 
-### 4. Open the API
+Required on a fresh volume — the schema is not created automatically. Skipping this leaves every write returning `500` with `Table 'secondbrain.users' doesn't exist`.
+
+### 4. Pull the local LLM model
+
+```bash
+docker compose exec ollama ollama pull llama3.2:3b
+```
+
+~2 GB, needed once per `ollama_data` volume. Only the AI endpoints depend on it; notes, tags, search, and auth work without it. Note that `GET /health` reports Ollama as `ok` once the *server* responds — it does not check whether a model is present.
+
+### 5. Open the API
 
 Open [http://localhost:8000/docs](http://localhost:8000/docs) for the Swagger UI. From there you can:
 
 1. `POST /auth/register` then `POST /auth/login` to obtain a JWT access token
 2. Authorize in Swagger with the token
 3. Create notes (`POST /notes/`), attach tags, and filter with `GET /notes?tag=python&tag=docker`
+4. Generate a summary with `POST /ai/summarize` (persisted on the note) or get tag ideas with `POST /ai/suggest-tags` (suggest-only — never auto-attached)
 
-A `200 OK` from `GET /health` confirms the API container is up.
+A `200 OK` from `GET /health` confirms the API container is up. If Ollama is stopped, the AI endpoints return a clean `503` while all note operations keep working.
 
 To wipe all data and start fresh: `docker compose down -v`.
 
@@ -105,9 +117,10 @@ app/
   auth/            # JWT register/login/refresh/logout, User model, per-user isolation
   notes/           # Note CRUD — router, service, repository, schemas, ORM model
   tags/            # Tag many-to-many — same layered structure
-  collections/     # Collection grouping — same layered structure (Phase 4)
-  search/          # Full-text search (Phase 4); semantic search (Phase 6)
-  ai/              # Ollama (local LLM) and Anthropic (cloud RAG) clients (Phases 5–6)
+  collections/     # Collection grouping — same layered structure
+  search/          # Full-text search; semantic search (Phase 6)
+  ai/              # Ollama local-LLM provider seam, summarize + suggest-tags (Phase 5);
+                   #   Anthropic cloud RAG client (Phase 6)
 ```
 
 Each domain uses the same layered structure: **router** (HTTP) → **service** (business logic) → **repository** (data access) → **model/schemas** (ORM + Pydantic).
@@ -129,8 +142,8 @@ Cloud LLM calls (Anthropic) go out over HTTPS directly from the API container. T
 | 1 — Repo Foundation | Git hygiene, project scaffold, Docker base, FastAPI skeleton, `GET /health` | ✅ Complete (2026-06-24) |
 | 2 — Database + API Skeleton | Async MySQL, Alembic migrations, Note CRUD, OpenAPI docs, pagination, tests | ✅ Complete (2026-06-24) |
 | 3 — Auth + Per-User Data Isolation | JWT auth with refresh tokens, per-user query isolation, cross-user access tests | ✅ Complete (2026-06-25) |
-| 4 — Tags, Collections, Full-Text Search | Many-to-many tags, collections, MySQL FULLTEXT search, REST surface polish | 🚧 In progress |
-| 5 — Local AI (Ollama) | Ollama in Docker, LLM provider abstraction, auto-summarization, auto-tagging | ⏳ Planned |
+| 4 — Tags, Collections, Full-Text Search | Many-to-many tags, collections, MySQL FULLTEXT search, REST surface polish | ✅ Complete (2026-06-29) |
+| 5 — Local AI (Ollama) | Ollama in Docker, LLM provider abstraction, auto-summarization, auto-tagging | 🚧 In progress |
 | 6 — RAG Pipeline | Embedding pipeline, note chunks, cosine similarity, natural-language Q&A via Claude | ⏳ Planned |
 | 7 — CI/CD Hardening + Portfolio Readiness | GitHub Actions lint/test/build/release, prod Compose, versioned images, secrets audit | ⏳ Planned |
 
