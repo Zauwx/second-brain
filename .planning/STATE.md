@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-06-23)
 
 ## Current Position
 
-Phase: 05 (local-ai-ollama) — BLOCKER CLEARED, ready for sign-off
+Phase: 05 (local-ai-ollama) — SHIPPED, awaiting merge
 Plan: 4 of 4
-Status: Live checkpoint criterion 3 (suggest-tags) fixed and live-verified via quick task 260720-1ng
-Last activity: 2026-07-20 - Completed quick task 260720-1ng: fix suggest-tags empty-list defect
+Status: Phase 05 shipped — PR #3 (https://github.com/Zauwx/second-brain/pull/3), verification passed 5/5
+Last activity: 2026-07-20 - Shipped Phase 05 as PR #3 against master
 
 Progress: [█████████░] 94%
 
