@@ -4,8 +4,8 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Completed 05-03-PLAN.md
-last_updated: "2026-07-06T17:12:00.900Z"
-last_activity: 2026-07-06
+last_updated: "2026-07-19T23:38:14.407Z"
+last_activity: "2026-07-19 - Completed quick task 260719-snb: alembic assets + venv PATH into api image"
 progress:
   total_phases: 7
   completed_phases: 5
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-06-23)
 
 ## Current Position
 
-Phase: 05 (local-ai-ollama) — EXECUTING
+Phase: 05 (local-ai-ollama) — BLOCKER CLEARED, ready for sign-off
 Plan: 4 of 4
-Status: Live checkpoint in progress (steps 1-3 pass, resuming at step 4)
-Last activity: 2026-07-19 - Completed quick task 260719-snb: alembic assets + venv PATH into api image
+Status: Live checkpoint criterion 3 (suggest-tags) fixed and live-verified via quick task 260720-1ng
+Last activity: 2026-07-20 - Completed quick task 260720-1ng: fix suggest-tags empty-list defect
 
 Progress: [█████████░] 94%
 
@@ -104,6 +104,7 @@ Recent decisions affecting current work:
 - [Phase 05]: [Phase 05 Plan 03]: Summarize response reuses NoteRead instead of a bespoke SummarizeResponse schema
 - [Phase 05]: [Phase 05 Plan 03]: retry-then-succeed test fake implements its own internal tenacity retry mirroring OllamaProvider, since AIService calls provider.complete() exactly once per request
 - [Phase 05 Plan 04]: _parse_tag_list implemented verbatim from RESEARCH.md Pattern 4 (json.loads -> regex [...] fallback -> dict-unwrap -> coerce -> []); AIService.suggest_tags has no write path at all, structurally enforcing suggest-only D-04
+- [Quick 260720-1ng]: Fixed suggest-tags empty-list defect — replaced json_mode=True (format="json") with an explicit TAG_SCHEMA passed as format=; llama3.2:3b now emits {tags: [...]} which the existing lenient parser unwraps correctly. Live-verified: non-empty unprefixed tags, D-04 suggest-only preserved, summarize unaffected, 129/130 hermetic tests green (live test opt-in via `pytest -m live_ollama`). Phase 05 BLOCKING concern cleared.
 
 ### Pending Todos
 
@@ -111,12 +112,10 @@ None yet.
 
 ### Blockers/Concerns
 
-yet.
+RESOLVED — `POST /ai/suggest-tags` empty-list defect, fixed and live-verified via quick task
+260720-1ng (see Decisions and Quick Tasks Completed below). Phase 05 sign-off is unblocked.
 
-- **BLOCKING — criterion 3 FAILS: `POST /ai/suggest-tags` always returns `{"tags": []}` in the real stack.** Root cause found in the 05-04 live checkpoint: `AIService.suggest_tags` calls the provider with `json_mode=True` → `format="json"`, which pushes llama3.2:3b to emit an OBJECT. It mimics the prompt's own placeholder example `["tag-one","tag-two"]` as KEYS, producing e.g. `{"tag-one":"language-models","tag-two":"nlp-techniques"}`. `_parse_tag_list`'s dict-unwrap looks for a dict value that IS a list; all values are strings, so nothing matches and it falls through to `return []` — HTTP 200 with an empty list, no warning logged. Mocked tests never caught it because they feed the parser hand-written strings and never exercise real model behavior under the production flag.
-  Verified fix candidate (3/3 clean runs): pass an explicit JSON schema as `format=` instead of `"json"` → `{"tags":["rag","retrieval","augmented-generation"]}`, which the EXISTING parser already unwraps correctly. Also drop/reword the `["tag-one","tag-two"]` example in `build_tag_prompt` — with `format=""` the model copies it as a literal `tag-` prefix in 2/3 runs.
-- Phase 05 CANNOT be signed off until the above is fixed and criterion 3 re-verified against the live stack.
-- 05-04 live checkpoint results: step 1 ✓ stack up; step 2 ✓ llama3.2:3b pulled; step 3 ✓ /health ok; step 4 ✓ summarize 13s, accurate 3-sentence summary, persisted (criterion 2); step 5 ✗ suggest-tags empty (criterion 3); step 6 ✓ ollama peak 2.479GiB/4GiB (criterion 4); step 7 ✓ clean 503 + notes CRUD unaffected + /health "unreachable" (D-07); step 8 ✓ 128 passed (criterion 5).
+- 05-04 live checkpoint results: step 1 ✓ stack up; step 2 ✓ llama3.2:3b pulled; step 3 ✓ /health ok; step 4 ✓ summarize 13s, accurate 3-sentence summary, persisted (criterion 2); step 5 ✗→✓ suggest-tags empty (criterion 3) — fixed by 260720-1ng; step 6 ✓ ollama peak 2.479GiB/4GiB (criterion 4); step 7 ✓ clean 503 + notes CRUD unaffected + /health "unreachable" (D-07); step 8 ✓ 128 passed (criterion 5).
 - `/health` reports `"ollama": "ok"` when zero models are pulled — it tracks reachability honestly (correctly showed "unreachable" when ollama was stopped) but not model availability, so it can read green while every AI endpoint fails with "model not found". Discovered during the 05-04 live checkpoint. Not yet triaged.
 - 05-04-PLAN.md Task 3 checkpoint steps omit any `alembic upgrade head` step, going from `compose up` straight to registering a user — that sequence cannot work on a fresh volume. Plan text needs correcting.
 
@@ -125,6 +124,7 @@ yet.
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260719-snb | fix: COPY alembic.ini + alembic/ into api image so migrations can run in-container | 2026-07-19 | 29d4b73 | [260719-snb-fix-copy-alembic-ini-alembic-into-api-im](./quick/260719-snb-fix-copy-alembic-ini-alembic-into-api-im/) |
+| 260720-1ng | fix: suggest-tags returns empty list — replace format="json" with an explicit TAG_SCHEMA | 2026-07-20 | 6a420e4 | [260720-1ng-fix-suggest-tags-returns-empty-list-repl](./quick/260720-1ng-fix-suggest-tags-returns-empty-list-repl/) |
 
 ## Deferred Items
 
@@ -135,6 +135,6 @@ yet.
 
 ## Session Continuity
 
-Last session: 2026-07-06T16:52:16.612Z
-Stopped at: Completed 05-03-PLAN.md
+Last session: 2026-07-19T23:38:14.399Z
+Stopped at: Completed quick task 260720-1ng: fix suggest-tags empty-list defect
 Resume file: None
