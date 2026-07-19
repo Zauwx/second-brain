@@ -113,8 +113,11 @@ None yet.
 
 yet.
 
-- 05-04 Task 3 (live end-to-end phase verification checkpoint) IN PROGRESS — steps 1-3 pass (stack up, llama3.2:3b pulled, /health ok). Blocked step 4+ on a Dockerfile defect, fixed by quick task 260719-snb. Resume at step 4 (summarize).
-- `/health` reports `"ollama": "ok"` when zero models are pulled — it proves reachability, not serviceability. Discovered during the 05-04 live checkpoint. Not yet triaged.
+- **BLOCKING — criterion 3 FAILS: `POST /ai/suggest-tags` always returns `{"tags": []}` in the real stack.** Root cause found in the 05-04 live checkpoint: `AIService.suggest_tags` calls the provider with `json_mode=True` → `format="json"`, which pushes llama3.2:3b to emit an OBJECT. It mimics the prompt's own placeholder example `["tag-one","tag-two"]` as KEYS, producing e.g. `{"tag-one":"language-models","tag-two":"nlp-techniques"}`. `_parse_tag_list`'s dict-unwrap looks for a dict value that IS a list; all values are strings, so nothing matches and it falls through to `return []` — HTTP 200 with an empty list, no warning logged. Mocked tests never caught it because they feed the parser hand-written strings and never exercise real model behavior under the production flag.
+  Verified fix candidate (3/3 clean runs): pass an explicit JSON schema as `format=` instead of `"json"` → `{"tags":["rag","retrieval","augmented-generation"]}`, which the EXISTING parser already unwraps correctly. Also drop/reword the `["tag-one","tag-two"]` example in `build_tag_prompt` — with `format=""` the model copies it as a literal `tag-` prefix in 2/3 runs.
+- Phase 05 CANNOT be signed off until the above is fixed and criterion 3 re-verified against the live stack.
+- 05-04 live checkpoint results: step 1 ✓ stack up; step 2 ✓ llama3.2:3b pulled; step 3 ✓ /health ok; step 4 ✓ summarize 13s, accurate 3-sentence summary, persisted (criterion 2); step 5 ✗ suggest-tags empty (criterion 3); step 6 ✓ ollama peak 2.479GiB/4GiB (criterion 4); step 7 ✓ clean 503 + notes CRUD unaffected + /health "unreachable" (D-07); step 8 ✓ 128 passed (criterion 5).
+- `/health` reports `"ollama": "ok"` when zero models are pulled — it tracks reachability honestly (correctly showed "unreachable" when ollama was stopped) but not model availability, so it can read green while every AI endpoint fails with "model not found". Discovered during the 05-04 live checkpoint. Not yet triaged.
 - 05-04-PLAN.md Task 3 checkpoint steps omit any `alembic upgrade head` step, going from `compose up` straight to registering a user — that sequence cannot work on a fresh volume. Plan text needs correcting.
 
 ### Quick Tasks Completed
