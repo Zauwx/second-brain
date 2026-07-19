@@ -10,6 +10,8 @@ raises HTTPException — 503 translation is the service layer's job
 (AIService._safe_complete, D-07).
 """
 
+from typing import Any, cast
+
 import httpx
 from ollama import AsyncClient
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
@@ -31,10 +33,15 @@ class OllamaProvider:
         wait=wait_exponential(multiplier=1, min=1, max=5),
         reraise=True,
     )
-    async def complete(self, prompt: str, *, json_mode: bool = False) -> str:
+    async def complete(self, prompt: str, *, format: str | dict = "") -> str:
+        # The Protocol seam intentionally types `format` as the broad `str | dict`
+        # (a pass-through transport hint owned by the caller — protocol.py); the
+        # ollama SDK's chat() narrows it to `Literal['', 'json'] | dict | None`.
+        # Every caller in this codebase only ever passes "" or a JSON-schema
+        # dict (never "json"), so the cast reflects actual runtime usage.
         response = await self._client.chat(
             model=self._model,
             messages=[{"role": "user", "content": prompt}],
-            format="json" if json_mode else "",
+            format=cast(Any, format),
         )
-        return response.message.content
+        return response.message.content or ""

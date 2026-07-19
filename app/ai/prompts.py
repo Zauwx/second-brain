@@ -36,17 +36,24 @@ def build_summarize_prompt(content: str) -> str:
 
 
 def build_tag_prompt(content: str) -> str:
-    """Build the prompt instructing a JSON list of short tag strings (D-05).
+    """Build the prompt instructing short tag strings for the note (D-05).
+
+    The shape contract (an object with a `tags` array of strings) is carried
+    by TAG_SCHEMA passed as `format=` to the provider — NOT by a literal
+    example in this prompt. An earlier version demonstrated the shape with a
+    literal `["tag-one", "tag-two"]` example; that was actively harmful: the
+    model copied it verbatim as object KEYS under format="json" (the root
+    cause of the empty-tag-list defect, 260720-1ng) and as a literal `tag-`
+    prefix on real tags in 2 of 3 runs under format="". The prompt therefore
+    only states the semantic requirement now.
 
     Output is untrusted model text — the caller must run it through
     `_parse_tag_list` before use (never eval'd, never trusted as-is).
     """
     safe_content = _truncate(content)
     return (
-        "You are a tagging assistant. Suggest 3-5 short, lowercase tags for "
-        "the note content below. Respond with ONLY a JSON list of strings, "
-        'like ["tag-one", "tag-two"] — no preamble, no explanation, no other '
-        "keys or text.\n\n"
+        "You are a tagging assistant. Suggest 3-5 short, lowercase topical "
+        "tags for the note content below. No preamble, no explanation.\n\n"
         "--- NOTE CONTENT START ---\n"
         f"{safe_content}\n"
         "--- NOTE CONTENT END ---"
